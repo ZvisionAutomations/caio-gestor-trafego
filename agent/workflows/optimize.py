@@ -9,7 +9,7 @@ from typing import Any
 
 from ..tools.meta_ads import MetaAdsTool
 from ..tools.whatsapp import WhatsAppTool
-from .analyze import AdSetAnalysis, AdSetState, AnalysisResult
+from .analyze import AdSetAnalysis, AnalysisResult
 
 logger = logging.getLogger("caio.workflows.optimize")
 

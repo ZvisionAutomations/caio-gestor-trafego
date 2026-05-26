@@ -13,6 +13,8 @@ from typing import Any
 from unittest.mock import MagicMock
 
 # Adiciona o root do package ao path
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent.tools.meta_ads import AdSetMetrics
@@ -60,7 +62,7 @@ SCENARIOS = [
             "adset_new_woman_02": AdSetState.FATIGUED,
             "adset_new_woman_novo": AdSetState.INSUFFICIENT,
         },
-        expected_actions=["duplicate_ad_set", "pause_creative", "request_new_creative"],
+        expected_actions=["duplicate_ad_set_budget_exceeded", "pause_creative", "request_new_creative"],
     ),
 ]
 
@@ -142,6 +144,14 @@ def run_scenario(scenario: Scenario) -> dict[str, Any]:
             passes.append(adset_id)
         elif expected_state:
             failures.append(f"{adset_id}: esperado {expected_state.value}, got {analysis.state.value}")
+
+    actual_actions = {
+        *[a["action"] for a in result.autonomous_actions],
+        *[a["action"] for a in result.approval_requests],
+    }
+    for expected_action in scenario.expected_actions:
+        if expected_action not in actual_actions:
+            failures.append(f"aÃ§Ã£o esperada nÃ£o encontrada: {expected_action}")
 
     verdict = "PASS" if not failures else "FAIL"
     print(f"\nVeredicto: {verdict}")

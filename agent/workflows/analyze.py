@@ -80,7 +80,6 @@ class AnalyzeWorkflow:
         logger.info("Iniciando ciclo de análise — janela: %d dias", days)
 
         ad_sets = self.meta.get_ad_set_insights(days=days)
-        account_insights = self.meta.get_account_insights(days=1)
 
         analyses: list[AdSetAnalysis] = []
         autonomous_actions: list[dict] = []

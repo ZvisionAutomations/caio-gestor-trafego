@@ -66,7 +66,7 @@ class LLMRouter:
         try:
             from groq import Groq
             client = Groq(api_key=os.environ["GROQ_API_KEY"])
-            messages: list[dict] = []
+            messages: list[Any] = []
             if system:
                 messages.append({"role": "system", "content": system})
             messages.append({"role": "user", "content": prompt})
@@ -108,4 +108,12 @@ class LLMRouter:
 
 
 # Instância singleton — importar nos workflows
-router = LLMRouter()
+router: LLMRouter | None = None
+
+
+def get_router() -> LLMRouter:
+    """Retorna o singleton sob demanda, evitando side effects no import."""
+    global router
+    if router is None:
+        router = LLMRouter()
+    return router

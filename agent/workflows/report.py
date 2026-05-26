@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -100,15 +100,15 @@ class ReportWorkflow:
         spend = account_data.get("spend", analysis.total_spend)
         leads = account_data.get("leads", analysis.total_leads)
         cpl = account_data.get("cpl", analysis.account_cpl)
-        roas = account_data.get("roas", 0.0)
-        revenue = account_data.get("revenue_estimated", 0.0)
+        active_adsets = sum(1 for a in analysis.ad_sets if a.metrics.status == "ACTIVE")
+        actions_taken_count = len(optimize_result.actions_taken)
 
         exec_summary = {
             "gasto_dia": spend,
             "leads_gerados": leads,
             "cpl_medio": cpl,
-            "receita_estimada": revenue,
-            "roas": roas,
+            "adsets_ativos": active_adsets,
+            "acoes_tomadas": actions_taken_count,
         }
 
         # Por produto (agrupando por nome do ad set)
@@ -170,8 +170,8 @@ class ReportWorkflow:
             f"Gasto hoje: R${e['gasto_dia']:.2f}",
             f"Leads gerados: {e['leads_gerados']}",
             f"CPL médio: R${e['cpl_medio']:.2f}",
-            f"Receita estimada: R${e['receita_estimada']:.2f}",
-            f"ROAS: {e['roas']:.2f}x",
+            f"Ad sets ativos: {e['adsets_ativos']}",
+            f"Ações tomadas: {e['acoes_tomadas']}",
             "",
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             "",
@@ -215,7 +215,7 @@ class ReportWorkflow:
 
         if report.anomalies:
             lines += ["", "[ANOMALIAS]"]
-            for anomaly in report.anomalias:
+            for anomaly in report.anomalies:
                 lines.append(f"⚠️ {anomaly}")
         else:
             lines += ["", "[ANOMALIAS]", "Nenhuma detectada."]
@@ -300,7 +300,7 @@ class ReportWorkflow:
         for pending in approvals_pending:
             req = pending.get("request", "")
             if "criativo" in req.lower():
-                recs.append(f"Kaue: aprovação do criativo pendente é urgente — sem ele o ad set fica sem material")
+                recs.append("Kaue: aprovação do criativo pendente é urgente — sem ele o ad set fica sem material")
 
         # Ad sets campeões para duplicação
         for a in analysis.ad_sets:

@@ -4,17 +4,47 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date
 from typing import Any
 
-from facebook_business.adobjects.adaccount import AdAccount
-from facebook_business.adobjects.adset import AdSet
-from facebook_business.adobjects.ad import Ad
-from facebook_business.adobjects.adcreative import AdCreative
-from facebook_business.adobjects.campaign import Campaign
-from facebook_business.api import FacebookAdsApi
+from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
+
+try:
+    from facebook_business.adobjects.adaccount import AdAccount
+    from facebook_business.adobjects.adset import AdSet
+    from facebook_business.adobjects.ad import Ad
+    from facebook_business.adobjects.adcreative import AdCreative
+    from facebook_business.adobjects.campaign import Campaign
+    from facebook_business.api import FacebookAdsApi
+except ModuleNotFoundError:
+    AdAccount = AdSet = Ad = AdCreative = Campaign = FacebookAdsApi = None  # type: ignore[assignment]
 
 logger = logging.getLogger("caio.tools.meta_ads")
+
+
+def _require_facebook_sdk() -> None:
+    if FacebookAdsApi is None:
+        raise ImportError(
+            "facebook-business não instalado. Execute `pip install -r requirements.txt` "
+            "antes de usar a Meta Ads API real."
+        )
+
+
+def _sdk_to_dict(obj: Any) -> dict:
+    """Converte objetos do SDK preservando compatibilidade entre versões."""
+    if hasattr(obj, "export_all_data"):
+        return obj.export_all_data()
+    if hasattr(obj, "get_all_data"):
+        return obj.get_all_data()
+    return dict(obj)
+
+
+_META_RETRY = retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    retry=retry_if_exception_type(Exception),
+    reraise=True,
+)
 
 _INSIGHT_FIELDS = [
     "spend", "clicks", "impressions", "ctr", "frequency",
@@ -88,6 +118,7 @@ class MetaAdsTool:
         app_secret: str | None = None,
         access_token: str | None = None,
     ) -> None:
+        _require_facebook_sdk()
         self.account_id = account_id or os.environ["META_ACCOUNT_ID"]
         _app_id = app_id or os.environ["META_APP_ID"]
         _app_secret = app_secret or os.environ["META_APP_SECRET"]
@@ -238,7 +269,7 @@ class MetaAdsTool:
             if status_filter:
                 params["filtering"] = [{"field": "status", "operator": "IN", "value": [status_filter]}]
             campaigns = self._account.get_campaigns(fields=_CAMPAIGN_FIELDS, params=params)
-            return [c.export_all_data() for c in campaigns]
+            return [_sdk_to_dict(c) for c in campaigns]
         except Exception as exc:
             logger.error("Erro ao listar campanhas: %s", exc)
             raise
@@ -255,7 +286,7 @@ class MetaAdsTool:
         """
         try:
             campaign = Campaign(campaign_id)
-            return campaign.api_get(fields=_CAMPAIGN_FIELDS).export_all_data()
+            return _sdk_to_dict(campaign.api_get(fields=_CAMPAIGN_FIELDS))
         except Exception as exc:
             logger.error("Erro ao buscar campanha %s: %s", campaign_id, exc)
             raise
@@ -300,7 +331,7 @@ class MetaAdsTool:
         try:
             campaign = Campaign(campaign_id)
             ad_sets = campaign.get_ad_sets(fields=_ADSET_FIELDS)
-            return [a.export_all_data() for a in ad_sets]
+            return [_sdk_to_dict(a) for a in ad_sets]
         except Exception as exc:
             logger.error("Erro ao listar ad sets da campanha %s: %s", campaign_id, exc)
             raise
@@ -322,7 +353,7 @@ class MetaAdsTool:
             if status_filter:
                 params["filtering"] = [{"field": "status", "operator": "IN", "value": [status_filter]}]
             ads = self._account.get_ads(fields=_AD_FIELDS, params=params)
-            return [a.export_all_data() for a in ads]
+            return [_sdk_to_dict(a) for a in ads]
         except Exception as exc:
             logger.error("Erro ao listar anúncios: %s", exc)
             raise
@@ -339,7 +370,7 @@ class MetaAdsTool:
         """
         try:
             ad = Ad(ad_id)
-            return ad.api_get(fields=_AD_FIELDS + ["effective_status", "bid_amount"]).export_all_data()
+            return _sdk_to_dict(ad.api_get(fields=_AD_FIELDS + ["effective_status", "bid_amount"]))
         except Exception as exc:
             logger.error("Erro ao buscar anúncio %s: %s", ad_id, exc)
             raise
@@ -357,7 +388,7 @@ class MetaAdsTool:
         try:
             adset = AdSet(adset_id)
             ads = adset.get_ads(fields=_AD_FIELDS + ["effective_status"])
-            return [a.export_all_data() for a in ads]
+            return [_sdk_to_dict(a) for a in ads]
         except Exception as exc:
             logger.error("Erro ao listar anúncios do ad set %s: %s", adset_id, exc)
             raise
@@ -375,7 +406,7 @@ class MetaAdsTool:
         try:
             campaign = Campaign(campaign_id)
             ads = campaign.get_ads(fields=_AD_FIELDS + ["effective_status"])
-            return [a.export_all_data() for a in ads]
+            return [_sdk_to_dict(a) for a in ads]
         except Exception as exc:
             logger.error("Erro ao listar anúncios da campanha %s: %s", campaign_id, exc)
             raise
@@ -419,7 +450,7 @@ class MetaAdsTool:
         ]
         try:
             creative = AdCreative(creative_id)
-            return creative.api_get(fields=_CREATIVE_FIELDS).export_all_data()
+            return _sdk_to_dict(creative.api_get(fields=_CREATIVE_FIELDS))
         except Exception as exc:
             logger.error("Erro ao buscar criativo %s: %s", creative_id, exc)
             raise
@@ -453,10 +484,14 @@ class MetaAdsTool:
             Lista de dicts com dados das imagens
         """
         try:
+            if not hasattr(self._account, "get_ad_images"):
+                # TODO: verificar disponibilidade na versão de Marketing API em produção.
+                logger.warning("get_ad_images indisponível no SDK atual")
+                return []
             images = self._account.get_ad_images(
                 fields=["id", "name", "hash", "url", "url_128", "created_time", "status"]
             )
-            return [img.export_all_data() for img in images]
+            return [_sdk_to_dict(img) for img in images]
         except Exception as exc:
             logger.error("Erro ao listar imagens: %s", exc)
             raise
@@ -469,10 +504,14 @@ class MetaAdsTool:
             Lista de dicts com dados dos vídeos
         """
         try:
+            if not hasattr(self._account, "get_ad_videos"):
+                # TODO: verificar disponibilidade na versão de Marketing API em produção.
+                logger.warning("get_ad_videos indisponível no SDK atual")
+                return []
             videos = self._account.get_ad_videos(
                 fields=["id", "title", "description", "thumbnail", "created_time", "length"]
             )
-            return [v.export_all_data() for v in videos]
+            return [_sdk_to_dict(v) for v in videos]
         except Exception as exc:
             logger.error("Erro ao listar vídeos: %s", exc)
             raise
@@ -492,7 +531,7 @@ class MetaAdsTool:
         ]
         try:
             audiences = self._account.get_custom_audiences(fields=_AUDIENCE_FIELDS)
-            return [a.export_all_data() for a in audiences]
+            return [_sdk_to_dict(a) for a in audiences]
         except Exception as exc:
             logger.error("Erro ao listar audiências customizadas: %s", exc)
             raise
@@ -532,7 +571,7 @@ class MetaAdsTool:
                 fields=_ACTIVITY_FIELDS,
                 params={"limit": limit},
             )
-            return [a.export_all_data() for a in activities]
+            return [_sdk_to_dict(a) for a in activities]
         except Exception as exc:
             logger.error("Erro ao listar atividades da conta: %s", exc)
             raise
@@ -558,7 +597,7 @@ class MetaAdsTool:
                 fields=_ACTIVITY_FIELDS,
                 params={"limit": limit},
             )
-            return [a.export_all_data() for a in activities]
+            return [_sdk_to_dict(a) for a in activities]
         except Exception as exc:
             logger.error("Erro ao listar atividades do ad set %s: %s", adset_id, exc)
             raise
@@ -612,6 +651,29 @@ class MetaAdsTool:
 
     # ── Ações Autônomas ────────────────────────────────────────────────────
 
+    @_META_RETRY
+    def _update_ad_status(self, ad_id: str, status: str) -> None:
+        ad = Ad(ad_id)
+        ad.api_update(params={"status": status})
+
+    @_META_RETRY
+    def _update_adset_status(self, adset_id: str, status: str) -> None:
+        ads = AdSet(adset_id)
+        ads.api_update(params={"status": status})
+
+    @_META_RETRY
+    def _update_adset_bid(self, adset_id: str, adjustment_pct: float) -> dict[str, float]:
+        ads = AdSet(adset_id)
+        current = ads.api_get(fields=["bid_amount"])
+        current_bid = float(current.get("bid_amount", 0))
+
+        if current_bid == 0:
+            raise ValueError("Bid atual não encontrado")
+
+        new_bid = int(current_bid * (1 + adjustment_pct))
+        ads.api_update(params={"bid_amount": new_bid})
+        return {"bid_before": current_bid / 100, "bid_after": new_bid / 100}
+
     def pause_ad(self, ad_id: str, reason: str = "") -> dict[str, Any]:
         """
         Pausa um anúncio específico.
@@ -624,8 +686,7 @@ class MetaAdsTool:
             Dicionário com resultado da operação
         """
         try:
-            ad = Ad(ad_id)
-            ad.api_update(params={"status": Ad.Status.paused})
+            self._update_ad_status(ad_id, Ad.Status.paused)
             logger.info("Anúncio %s pausado — motivo: %s", ad_id, reason or "não informado")
             return {"success": True, "ad_id": ad_id, "action": "paused", "reason": reason}
         except Exception as exc:
@@ -644,8 +705,7 @@ class MetaAdsTool:
             Dicionário com resultado da operação
         """
         try:
-            ads = AdSet(adset_id)
-            ads.api_update(params={"status": AdSet.Status.paused})
+            self._update_adset_status(adset_id, AdSet.Status.paused)
             logger.info("Ad set %s pausado — motivo: %s", adset_id, reason or "não informado")
             return {"success": True, "adset_id": adset_id, "action": "paused", "reason": reason}
         except Exception as exc:
@@ -664,8 +724,7 @@ class MetaAdsTool:
             Dicionário com resultado da operação
         """
         try:
-            ad = Ad(ad_id)
-            ad.api_update(params={"status": Ad.Status.active})
+            self._update_ad_status(ad_id, Ad.Status.active)
             logger.info("Anúncio %s reativado — motivo: %s", ad_id, reason or "não informado")
             return {"success": True, "ad_id": ad_id, "action": "resumed", "reason": reason}
         except Exception as exc:
@@ -690,25 +749,20 @@ class MetaAdsTool:
                 "error": f"Ajuste {adjustment_pct:.0%} excede o limite de ±20%",
             }
         try:
-            ads = AdSet(adset_id)
-            current = ads.api_get(fields=["bid_amount"])
-            current_bid = float(current.get("bid_amount", 0))
-
+            bid = self._update_adset_bid(adset_id, adjustment_pct)
+            current_bid = bid["bid_before"] * 100
             if current_bid == 0:
                 return {"success": False, "adset_id": adset_id, "error": "Bid atual não encontrado"}
 
-            new_bid = int(current_bid * (1 + adjustment_pct))
-            ads.api_update(params={"bid_amount": new_bid})
-
             logger.info(
                 "Bid ajustado em %s — %.0f → %d (%+.0f%%)",
-                adset_id, current_bid, new_bid, adjustment_pct * 100,
+                adset_id, bid["bid_before"] * 100, bid["bid_after"] * 100, adjustment_pct * 100,
             )
             return {
                 "success": True,
                 "adset_id": adset_id,
                 "bid_before": current_bid / 100,  # centavos → R$
-                "bid_after": new_bid / 100,
+                "bid_after": bid["bid_after"],
                 "adjustment_pct": adjustment_pct,
             }
         except Exception as exc:
@@ -783,8 +837,7 @@ class MetaAdsTool:
             Dicionário com resultado da operação
         """
         try:
-            ads = AdSet(adset_id)
-            ads.api_update(params={"status": AdSet.Status.active})
+            self._update_adset_status(adset_id, AdSet.Status.active)
             logger.info("Ad set %s reativado — motivo: %s", adset_id, reason or "não informado")
             return {"success": True, "adset_id": adset_id, "action": "resumed", "reason": reason}
         except Exception as exc:
@@ -871,8 +924,16 @@ class MetaAdsTool:
 
     @staticmethod
     def _days_to_preset(days: int) -> str:
-        presets = {1: "yesterday", 7: "last_7d", 14: "last_14d", 30: "last_30d"}
-        return presets.get(days, f"last_{days}d")
+        presets = {
+            1: "yesterday",
+            3: "last_3d",
+            7: "last_7d",
+            14: "last_14d",
+            28: "last_28d",
+            30: "last_30d",
+            90: "last_90d",
+        }
+        return presets.get(days, "last_7d")
 
     @staticmethod
     def _extract_action(row: dict, action_type: str) -> int:

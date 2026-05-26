@@ -9,7 +9,6 @@ import yaml
 from agno.agent import Agent
 from agno.models.anthropic import Claude
 
-from .llm_router import LLMRouter  # noqa: F401 — disponível para uso nos workflows
 from .tools.meta_ads import MetaAdsTool
 from .tools.whatsapp import WhatsAppTool
 
@@ -218,6 +217,5 @@ def build_caio(
         ],
         reasoning=False,
         markdown=False,
-        show_tool_calls=False,
-        add_history_to_messages=False,
+        add_history_to_context=False,
     )
