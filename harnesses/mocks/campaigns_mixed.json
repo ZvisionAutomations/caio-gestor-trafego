@@ -1,0 +1,57 @@
+{
+  "account_id": "act_RAIZ_VITAL_MOCK",
+  "date_range": "last_7_days",
+  "ad_sets": [
+    {
+      "id": "adset_alpha_pulse_01",
+      "name": "Alpha Pulse | Homens 40-65 | Interesses Saude Masculina",
+      "status": "ACTIVE",
+      "daily_budget": 50.00,
+      "spend": 90.00,
+      "clicks": 500,
+      "impressions": 25000,
+      "leads": 45,
+      "cpl": 18.00,
+      "ctr": 2.0,
+      "frequency": 2.0,
+      "roas": 3.2,
+      "days_running": 5,
+      "days_above_cpl_threshold": 0,
+      "days_below_champion_cpl": 5
+    },
+    {
+      "id": "adset_new_woman_02",
+      "name": "New Woman | Criativo Depoimento | Mulheres 50+",
+      "status": "ACTIVE",
+      "daily_budget": 30.00,
+      "spend": 52.00,
+      "clicks": 420,
+      "impressions": 7000,
+      "leads": 12,
+      "cpl": 29.00,
+      "ctr": 6.0,
+      "frequency": 4.1,
+      "roas": 2.6,
+      "days_running": 8,
+      "days_above_cpl_threshold": 0,
+      "days_below_champion_cpl": 0
+    },
+    {
+      "id": "adset_new_woman_novo",
+      "name": "New Woman | Teste Novo Publico | Mulheres 45-55",
+      "status": "ACTIVE",
+      "daily_budget": 20.00,
+      "spend": 8.00,
+      "clicks": 30,
+      "impressions": 1500,
+      "leads": 2,
+      "cpl": 40.00,
+      "ctr": 2.0,
+      "frequency": 1.2,
+      "roas": 1.8,
+      "days_running": 1,
+      "days_above_cpl_threshold": 0,
+      "days_below_champion_cpl": 0
+    }
+  ]
+}

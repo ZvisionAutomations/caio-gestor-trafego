@@ -1,0 +1,40 @@
+{
+  "account_id": "act_RAIZ_VITAL_MOCK",
+  "date_range": "last_7_days",
+  "ad_sets": [
+    {
+      "id": "adset_new_woman_01",
+      "name": "New Woman | Mulheres 45-60 | Interesses Saude",
+      "status": "ACTIVE",
+      "daily_budget": 50.00,
+      "spend": 48.00,
+      "clicks": 280,
+      "impressions": 14000,
+      "leads": 18,
+      "cpl": 26.67,
+      "ctr": 2.0,
+      "frequency": 2.1,
+      "roas": 3.1,
+      "days_running": 5,
+      "days_above_cpl_threshold": 0,
+      "days_below_champion_cpl": 0
+    },
+    {
+      "id": "adset_alpha_pulse_01",
+      "name": "Alpha Pulse | Homens 40-65 | Interesses Saude Masculina",
+      "status": "ACTIVE",
+      "daily_budget": 50.00,
+      "spend": 46.00,
+      "clicks": 310,
+      "impressions": 15500,
+      "leads": 21,
+      "cpl": 21.90,
+      "ctr": 2.0,
+      "frequency": 1.9,
+      "roas": 3.4,
+      "days_running": 5,
+      "days_above_cpl_threshold": 0,
+      "days_below_champion_cpl": 0
+    }
+  ]
+}

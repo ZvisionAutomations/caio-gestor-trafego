@@ -1,0 +1,65 @@
+# Caio — Configurações Raiz Vital
+# Edite antes do go-live. Credenciais NUNCA aqui — use .env
+
+agent:
+  name: "Caio"
+  role: "Gestor de Tráfego Raiz Vital"
+  version: "1.0.0"
+  llm_model: "claude-sonnet-4-6"
+
+# THRESHOLDS DE PERFORMANCE (defaults — recalibrar aos 7 dias)
+thresholds:
+  cpl_max: 35.00          # R$ — pausa automática acima deste valor
+  cpl_alert: 25.00        # R$ — zona de atenção
+  cpl_critical: 105.00    # R$ — alerta crítico (3x o threshold)
+  ctr_min: 1.5            # % — alerta abaixo deste valor
+  ctr_pause: 1.0          # % — pausa abaixo deste valor após 1.000 impressões
+  roas_min: 2.0           # ROAS mínimo viável
+  roas_bid_adjust: 1.8    # Ajuste de bid abaixo deste valor
+  frequency_alert: 3.0    # Alerta de frequência
+  frequency_pause: 3.5    # Pausa de criativo (não do ad set inteiro)
+  min_clicks_to_act: 50   # Mínimo de cliques para qualquer ação
+
+# GUARDRAILS FINANCEIROS
+budget:
+  max_daily_per_adset: 0.00   # R$ — DEFINIR COM FERNANDO (bloqueante para go-live)
+  max_bid_adjustment: 0.20    # ±20% — limite de ajuste autônomo de bid
+
+# CRITÉRIOS DE AD SET CAMPEÃO
+champion:
+  min_days: 3              # Dias consecutivos para classificar como campeão
+  max_cpl: 20.00           # R$ — CPL para duplicação autônoma
+  min_ctr: 3.0             # % — CTR mínimo para campeão
+  min_roas: 3.0            # ROAS mínimo para campeão
+  min_clicks: 500          # Volume mínimo de cliques
+
+# CICLOS DE OPERAÇÃO
+schedule:
+  morning_analysis: "08:00"
+  afternoon_check: "14:00"
+  daily_report: "20:30"
+  timezone: "America/Sao_Paulo"
+
+# RECALIBRAÇÃO DE THRESHOLDS
+calibration:
+  recalibrate_after_days: 7
+  min_data_points: 500     # Cliques mínimos para recalibração confiável
+
+# APROVAÇÕES
+approval:
+  timeout_hours: 2
+  approver: "Kaue"
+  poll_interval_minutes: 5  # Frequência de check da resposta
+
+# ALERTAS CRÍTICOS
+alerts:
+  budget_consumed_hour: 16    # Budget consumido antes das 16h = alerta
+  critical_cpl_multiplier: 3  # CPL > 3x threshold = alerta crítico
+  conversion_drop_pct: 50     # Queda > 50% na conversão = alerta
+
+# LOGGING
+logging:
+  level: "INFO"
+  log_dir: "logs/"
+  max_file_size_mb: 10
+  backup_count: 7

@@ -1,0 +1,23 @@
+{
+  "account_id": "act_RAIZ_VITAL_MOCK",
+  "date_range": "last_7_days",
+  "ad_sets": [
+    {
+      "id": "adset_new_woman_01",
+      "name": "New Woman | Mulheres 45-60 | Interesses Saude",
+      "status": "ACTIVE",
+      "daily_budget": 50.00,
+      "spend": 126.00,
+      "clicks": 360,
+      "impressions": 18000,
+      "leads": 3,
+      "cpl": 42.00,
+      "ctr": 2.0,
+      "frequency": 2.8,
+      "roas": 1.4,
+      "days_running": 5,
+      "days_above_cpl_threshold": 2,
+      "days_below_champion_cpl": 0
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "scenario": "kaue_aprova",
+  "description": "Kaue responde OK — agente deve executar a acao aprovada",
+  "action_proposed": "duplicate_adset_alpha_pulse_01",
+  "kaue_response": "OK",
+  "expected_outcome": "EXECUTE_ACTION",
+  "mock_messages": [
+    {
+      "key": {
+        "id": "APPROVAL_REQUEST_MSG_ID",
+        "remoteJid": "120363000000000000@g.us",
+        "fromMe": true
+      },
+      "messageTimestamp": 1716667200,
+      "message": {
+        "conversation": "Caio — Aprovacao Necessaria..."
+      }
+    },
+    {
+      "key": {
+        "id": "KAUE_RESPONSE_MSG_ID",
+        "remoteJid": "120363000000000000@g.us",
+        "fromMe": false
+      },
+      "messageTimestamp": 1716668000,
+      "message": {
+        "conversation": "OK"
+      }
+    }
+  ]
+}
