@@ -1,6 +1,7 @@
 .PHONY: help install run test report lint
 
-PYTHON := python3
+PYTHON ?= python
+MYPY_FILES := agent/caio.py agent/tools/meta_ads.py agent/tools/whatsapp.py agent/tools/scheduler.py agent/workflows/analyze.py agent/workflows/optimize.py agent/workflows/approve.py agent/workflows/report.py
 
 help:
 	@echo "Caio — Gestor de Tráfego Raiz Vital"
@@ -21,22 +22,12 @@ run:
 
 test:
 	@echo "Executando harnesses..."
-	@echo ""
-	@echo "=== test_analyze ==="
-	$(PYTHON) harnesses/test_analyze.py
-	@echo ""
-	@echo "=== test_report ==="
-	$(PYTHON) harnesses/test_report.py
-	@echo ""
-	@echo "=== test_approve ==="
-	$(PYTHON) harnesses/test_approve.py
-	@echo ""
-	@echo "Todos os harnesses concluídos."
+	$(PYTHON) scripts/run_harnesses.py
 
 report:
 	@echo "Gerando relatório diário (mock)..."
 	$(PYTHON) harnesses/test_report.py
 
 lint:
-	ruff check agent/ harnesses/
-	mypy agent/ --ignore-missing-imports
+	$(PYTHON) -m ruff check agent/ harnesses/ scripts/
+	$(PYTHON) -m mypy $(MYPY_FILES) --python-version 3.11 --ignore-missing-imports --follow-imports=skip --no-incremental

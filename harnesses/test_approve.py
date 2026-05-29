@@ -8,6 +8,8 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from agent.workflows.approve import ApprovalDecision, ApproveWorkflow
@@ -91,6 +93,11 @@ def run_scenario(scenario: dict) -> dict:
         )
 
     print(f"  Decisão: {outcome.decision.value} (esperado: {expected_decision.value})")
+    if outcome.action_executed != scenario["expected_executed"]:
+        failures.append(
+            f"Execucao: esperado {scenario['expected_executed']}, got {outcome.action_executed}"
+        )
+
     print(f"  Executada: {outcome.action_executed}")
     print(f"  Erro: {outcome.error or 'nenhum'}")
 

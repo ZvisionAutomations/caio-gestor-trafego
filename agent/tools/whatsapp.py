@@ -1,7 +1,6 @@
 """WhatsApp Tool — Evolution API para comunicação do Caio com o grupo Raiz Vital."""
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import time
@@ -126,6 +125,7 @@ class WhatsAppTool:
         data: str,
         action_taken: str,
         next_step: str,
+        group_id: str | None = None,
     ) -> dict[str, Any]:
         """
         Envia alerta crítico imediato para o grupo.
@@ -150,7 +150,10 @@ class WhatsAppTool:
             f"PRÓXIMO PASSO: {next_step}\n"
             "━━━━━━━━━━━━━━━━━━━━━━━"
         )
-        result = self.send_message(text)
+        result = self.send_message(text, group_id)
+        if not result.get("success"):
+            logger.error("Falha ao enviar alerta critico: %s", result.get("error"))
+            return result
         logger.warning("Alerta crítico enviado — problema: %s", problem)
         return result
 

@@ -9,7 +9,6 @@ import yaml
 from agno.agent import Agent
 from agno.models.anthropic import Claude
 
-from .llm_router import LLMRouter  # noqa: F401 — disponível para uso nos workflows
 from .tools.meta_ads import MetaAdsTool
 from .tools.whatsapp import WhatsAppTool
 
@@ -64,15 +63,11 @@ Budget diário máximo por ad set: [BUDGET_POR_AD_SET — definido em settings.y
    - Frequência > 3.5 no mesmo público nos últimos 3 dias
    - Budget diário consumido e hora < 16h (possível problema de segmentação)
 
-2. Reativar anúncio pausado quando:
-   - Condição de pausa foi resolvida (ex: frequência caiu após rotação de público)
-   - Criativo foi atualizado pelo Kaue
-
-3. Ajustar bid ±20% dentro do limite quando:
+2. Ajustar bid ±20% dentro do limite quando:
    - CPL está entre R$25–35 (zona de atenção)
    - ROAS está entre 1.8–2.0x (abaixo do mínimo, recuperável)
 
-4. Duplicar ad set quando TODOS estes critérios forem atendidos:
+3. Duplicar ad set quando TODOS estes critérios forem atendidos:
    - CPL < R$20 por 3 dias consecutivos
    - CTR > 3% com mínimo de 500 cliques
    - ROAS > 3.0x sustentado
@@ -82,6 +77,7 @@ Budget diário máximo por ad set: [BUDGET_POR_AD_SET — definido em settings.y
 
 - Subir criativo novo (gerado por IA ou qualquer outro)
 - Criar campanha ou ad set novo do zero
+- Ativar ou reativar campanha, ad set ou anúncio pausado
 - Aumentar budget além do limite configurado
 - Duplicar ad set quando budget total seria excedido
 
@@ -197,18 +193,25 @@ def build_caio(
             meta_tool.get_ad_set_insights,
             meta_tool.get_adset_insights,
             meta_tool.get_campaign_insights,
+            meta_tool.get_insights_breakdowns,
             # Leitura — anúncios e criativos
             meta_tool.get_ads_by_adset,
             meta_tool.get_ad_insights,
             meta_tool.get_creative,
+            meta_tool.get_creative_preview,
             meta_tool.get_fatigued_ads_in_adset,
             # Leitura — audiências
             meta_tool.get_custom_audiences,
+            meta_tool.search_targeting,
+            meta_tool.validate_targeting,
+            meta_tool.describe_targeting,
+            meta_tool.estimate_targeting_reach,
+            meta_tool.estimate_targeting_delivery,
+            meta_tool.get_pixels,
+            meta_tool.diagnose_pixels,
             # Ações autônomas
             meta_tool.pause_ad,
             meta_tool.pause_ad_set,
-            meta_tool.resume_ad,
-            meta_tool.resume_ad_set,
             meta_tool.adjust_bid,
             meta_tool.duplicate_ad_set,
             # WhatsApp
@@ -218,6 +221,5 @@ def build_caio(
         ],
         reasoning=False,
         markdown=False,
-        show_tool_calls=False,
-        add_history_to_messages=False,
+        add_history_to_context=False,
     )

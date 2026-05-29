@@ -22,7 +22,6 @@ def main() -> None:
     from .tools.scheduler import CaioScheduler
     from .workflows.analyze import AnalyzeWorkflow
     from .workflows.optimize import OptimizeWorkflow
-    from .workflows.approve import ApproveWorkflow
     from .workflows.report import ReportWorkflow
 
     logger.info("Caio — Gestor de Tráfego Raiz Vital iniciando...")
@@ -33,7 +32,6 @@ def main() -> None:
 
     analyze_wf = AnalyzeWorkflow(meta)
     optimize_wf = OptimizeWorkflow(meta, wa)
-    approve_wf = ApproveWorkflow(meta, wa)
     report_wf = ReportWorkflow(meta, wa)
 
     approvals_pending: list[dict] = []
