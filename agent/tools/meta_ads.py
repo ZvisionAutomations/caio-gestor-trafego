@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import json
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -15,9 +16,10 @@ try:
     from facebook_business.adobjects.ad import Ad
     from facebook_business.adobjects.adcreative import AdCreative
     from facebook_business.adobjects.campaign import Campaign
+    from facebook_business.adobjects.targetingsearch import TargetingSearch
     from facebook_business.api import FacebookAdsApi
 except ModuleNotFoundError:
-    AdAccount = AdSet = Ad = AdCreative = Campaign = FacebookAdsApi = None  # type: ignore[assignment]
+    AdAccount = AdSet = Ad = AdCreative = Campaign = TargetingSearch = FacebookAdsApi = None  # type: ignore[assignment]
 
 logger = logging.getLogger("caio.tools.meta_ads")
 
@@ -62,6 +64,19 @@ _ADSET_FIELDS = [
 _CAMPAIGN_FIELDS = [
     "id", "name", "status", "objective", "daily_budget", "lifetime_budget",
     "buying_type", "bid_strategy", "created_time", "start_time",
+]
+_PREVIEW_FORMATS = [
+    "DESKTOP_FEED_STANDARD",
+    "RIGHT_COLUMN_STANDARD",
+    "MOBILE_FEED_STANDARD",
+    "MOBILE_FEED_BASIC",
+    "INSTAGRAM_STANDARD",
+    "INSTAGRAM_STORY",
+    "INSTAGRAM_REELS",
+    "MARKETPLACE_MOBILE",
+    "AUDIENCE_NETWORK_OUTSTREAM_VIDEO",
+    "INSTANT_ARTICLE_STANDARD",
+    "MESSENGER_MOBILE_INBOX_MEDIA",
 ]
 
 
@@ -250,6 +265,33 @@ class MetaAdsTool:
             return self._normalize_insight_row(raw, days)
         except Exception as exc:
             logger.error("Erro ao buscar insights do ad set %s: %s", adset_id, exc)
+            raise
+
+    def get_insights_breakdowns(
+        self,
+        level: str = "adset",
+        days: int = 7,
+        breakdowns: list[str] | None = None,
+    ) -> list[dict[str, Any]]:
+        """
+        Retorna insights segmentados por breakdowns da Meta.
+
+        Exemplos de breakdowns uteis: age, gender, publisher_platform,
+        platform_position, country.
+        """
+        date_preset = self._days_to_preset(days)
+        params: dict[str, Any] = {
+            "date_preset": date_preset,
+            "level": level,
+        }
+        if breakdowns:
+            params["breakdowns"] = breakdowns
+
+        try:
+            insights = self._account.get_insights(fields=_INSIGHT_FIELDS, params=params)
+            return [_sdk_to_dict(row) for row in insights]
+        except Exception as exc:
+            logger.error("Erro ao buscar insights com breakdowns: %s", exc)
             raise
 
     # ── Campanhas ──────────────────────────────────────────────────────────
@@ -455,6 +497,33 @@ class MetaAdsTool:
             logger.error("Erro ao buscar criativo %s: %s", creative_id, exc)
             raise
 
+    def get_creative_preview(
+        self,
+        creative_id: str,
+        ad_format: str = "DESKTOP_FEED_STANDARD",
+    ) -> list[dict[str, Any]]:
+        """
+        Gera preview HTML de um criativo em um formato da Meta.
+
+        Use ad_format="all" para retornar os formatos principais suportados.
+        """
+        try:
+            formats = _PREVIEW_FORMATS if ad_format.lower() == "all" else [ad_format]
+            previews: list[dict[str, Any]] = []
+            for fmt in formats:
+                try:
+                    rows = AdCreative(creative_id).get_previews(params={"ad_format": fmt})
+                    for row in rows:
+                        data = _sdk_to_dict(row)
+                        data["_format"] = fmt
+                        previews.append(data)
+                except Exception as exc:
+                    logger.warning("Preview indisponivel para %s/%s: %s", creative_id, fmt, exc)
+            return previews
+        except Exception as exc:
+            logger.error("Erro ao gerar preview do criativo %s: %s", creative_id, exc)
+            raise
+
     def get_creatives_by_ad(self, ad_id: str) -> list[dict]:
         """
         Retorna criativos associados a um anúncio.
@@ -549,6 +618,143 @@ class MetaAdsTool:
         except Exception as exc:
             logger.error("Erro ao listar lookalike audiences: %s", exc)
             raise
+
+    def search_targeting(
+        self,
+        query: str,
+        targeting_type: str = "adinterest",
+        limit: int = 25,
+        locale: str = "pt_BR",
+    ) -> list[dict[str, Any]]:
+        """
+        Busca interesses, geolocalizacoes e categorias de targeting.
+
+        targeting_type comum: adinterest, adinterestsuggestion, adgeolocation,
+        adTargetingCategory.
+        """
+        if TargetingSearch is None:
+            raise ImportError("TargetingSearch indisponivel no facebook-business SDK instalado")
+
+        params: dict[str, Any] = {
+            "type": targeting_type,
+            "limit": limit,
+            "locale": locale,
+        }
+        if query:
+            params["q"] = query
+        try:
+            return [_sdk_to_dict(row) for row in TargetingSearch.search(params=params)]
+        except Exception as exc:
+            logger.error("Erro ao buscar targeting %s/%s: %s", targeting_type, query, exc)
+            raise
+
+    def validate_targeting(self, targeting_spec: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
+        """Valida uma especificacao de targeting contra a conta de anuncios."""
+        try:
+            if hasattr(self._account, "get_targeting_validation"):
+                result = self._account.get_targeting_validation(params={"targeting_spec": targeting_spec})
+                return [_sdk_to_dict(row) for row in result]
+
+            api = FacebookAdsApi.get_default_api()
+            response = api.call(
+                "GET",
+                f"/{self.account_id}/targetingvalidation",
+                params={"targeting_spec": json.dumps(targeting_spec)},
+            )
+            return response.json()
+        except Exception as exc:
+            logger.error("Erro ao validar targeting: %s", exc)
+            raise
+
+    def describe_targeting(self, targeting_spec: dict[str, Any]) -> list[dict[str, Any]] | dict[str, Any]:
+        """Retorna descricao legivel das linhas de targeting configuradas."""
+        try:
+            if hasattr(self._account, "get_targeting_sentence_lines"):
+                result = self._account.get_targeting_sentence_lines(params={"targeting_spec": targeting_spec})
+                return [_sdk_to_dict(row) for row in result]
+
+            api = FacebookAdsApi.get_default_api()
+            response = api.call(
+                "GET",
+                f"/{self.account_id}/targetingsentencelines",
+                params={"targeting_spec": json.dumps(targeting_spec)},
+            )
+            return response.json()
+        except Exception as exc:
+            logger.error("Erro ao descrever targeting: %s", exc)
+            raise
+
+    def estimate_targeting_reach(
+        self,
+        targeting_spec: dict[str, Any],
+        optimization_goal: str | None = None,
+    ) -> list[dict[str, Any]]:
+        """Estima alcance para uma especificacao de targeting."""
+        params: dict[str, Any] = {"targeting_spec": targeting_spec}
+        if optimization_goal:
+            params["optimization_goal"] = optimization_goal
+        try:
+            result = self._account.get_reach_estimate(fields=[], params=params)
+            return [_sdk_to_dict(row) for row in result]
+        except Exception as exc:
+            logger.error("Erro ao estimar alcance de targeting: %s", exc)
+            raise
+
+    def estimate_targeting_delivery(
+        self,
+        targeting_spec: dict[str, Any],
+        optimization_goal: str = "LEAD_GENERATION",
+        promoted_object: dict[str, Any] | None = None,
+        daily_budget_centavos: int | None = None,
+    ) -> list[dict[str, Any]]:
+        """Estima entrega diaria e bids para uma especificacao de targeting."""
+        params: dict[str, Any] = {
+            "targeting_spec": targeting_spec,
+            "optimization_goal": optimization_goal,
+        }
+        if promoted_object:
+            params["promoted_object"] = promoted_object
+        if daily_budget_centavos is not None:
+            params["daily_budget"] = daily_budget_centavos
+        try:
+            result = self._account.get_delivery_estimate(fields=[], params=params)
+            return [_sdk_to_dict(row) for row in result]
+        except Exception as exc:
+            logger.error("Erro ao estimar entrega de targeting: %s", exc)
+            raise
+
+    def get_pixels(self) -> list[dict[str, Any]]:
+        """Lista pixels/datasets conectados a conta quando o SDK expuser o metodo."""
+        try:
+            get_pixels = getattr(self._account, "get_ads_pixels", None)
+            if get_pixels is None:
+                get_pixels = getattr(self._account, "get_ad_pixels", None)
+            if get_pixels is None:
+                logger.warning("get_ads_pixels/get_ad_pixels indisponivel no SDK atual")
+                return []
+            pixels = get_pixels(
+                fields=["id", "name", "code", "creation_time", "last_fired_time"]
+            )
+            return [_sdk_to_dict(pixel) for pixel in pixels]
+        except Exception as exc:
+            logger.error("Erro ao listar pixels/datasets: %s", exc)
+            raise
+
+    def diagnose_pixels(self) -> dict[str, Any]:
+        """Diagnostico basico de disponibilidade e atividade recente de pixels/datasets."""
+        pixels = self.get_pixels()
+        inactive = [p for p in pixels if not p.get("last_fired_time")]
+        return {
+            "total": len(pixels),
+            "active": len(pixels) - len(inactive),
+            "inactive": len(inactive),
+            "pixels": pixels,
+            "notes": (
+                "Sem pixel/dataset ativo; para Raiz Vital o sprint atual opera via WhatsApp."
+                if not pixels else
+                "Validar se eventos recentes batem com o plano de mensuracao antes de escalar."
+            ),
+        }
 
     # ── Atividades ────────────────────────────────────────────────────────
 

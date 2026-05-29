@@ -52,6 +52,9 @@ cp config/.env.example config/.env
 # 3. Testar com mocks (sem credenciais necessárias)
 make test
 
+# Windows sem GNU Make instalado
+python scripts/run_harnesses.py
+
 # 4. Go-live (após preencher .env)
 make run
 ```
@@ -86,7 +89,7 @@ make run
 | Ação | Requer Aprovação? |
 |------|-------------------|
 | Pausar anúncio/ad set (CPL crítico) | Não |
-| Reativar anúncio pausado | Não |
+| Reativar anúncio pausado | **SIM — Kaue** |
 | Ajustar bid ±20% | Não |
 | Duplicar ad set (budget disponível) | Não |
 | Subir criativo novo | **SIM — Kaue** |
