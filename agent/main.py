@@ -21,6 +21,7 @@ def main() -> None:
     from .tools.whatsapp import WhatsAppTool
     from .tools.scheduler import CaioScheduler
     from .workflows.analyze import AnalyzeWorkflow
+    from .workflows.calibrate import CalibrationWorkflow
     from .workflows.optimize import OptimizeWorkflow
     from .workflows.report import ReportWorkflow
 
@@ -31,6 +32,7 @@ def main() -> None:
     scheduler = CaioScheduler()
 
     analyze_wf = AnalyzeWorkflow(meta)
+    calibration_wf = CalibrationWorkflow()
     optimize_wf = OptimizeWorkflow(meta, wa)
     report_wf = ReportWorkflow(meta, wa)
 
@@ -56,11 +58,9 @@ def main() -> None:
 
     def recalibrate_thresholds() -> None:
         logger.info("=== Recalibração de Thresholds — Dia 7 ===")
-        wa.send_message(
-            "📊 Caio: Período de 7 dias completo. "
-            "Dados insuficientes para recalibração automática neste ciclo "
-            "(mínimo 500 cliques necessário). Thresholds mantidos."
-        )
+        analysis = analyze_wf.run(days=7)
+        proposal = calibration_wf.build_proposal(analysis)
+        wa.send_message(proposal.render_message())
 
     scheduler.register_morning_analysis(morning_cycle)
     scheduler.register_afternoon_check(afternoon_cycle)
