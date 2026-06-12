@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..creative_tasks import TASK_FATIGUE, record_creative_task
 from ..tools.meta_ads import MetaAdsTool
 from ..tools.whatsapp import WhatsAppTool
 from .analyze import AdSetAnalysis, AnalysisResult
@@ -37,6 +38,7 @@ class OptimizeResult:
     actions_taken: list[ActionLog] = field(default_factory=list)
     approvals_sent: list[dict[str, Any]] = field(default_factory=list)
     alerts_sent: list[dict[str, Any]] = field(default_factory=list)
+    creative_tasks: list[dict[str, Any]] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
 
 
@@ -169,12 +171,21 @@ class OptimizeWorkflow:
         for req in analysis.requires_approval:
             try:
                 if req == "request_new_creative":
-                    api_result = self.wa.send_approval_request(
-                        action_name="Novo Criativo — Criativo Fatigado",
-                        reason=f"Frequência {metrics.frequency:.1f} — criativo precisa ser substituído",
+                    # Story 039 #12: fadiga NAO vira aprovacao do Kaue — vira
+                    # tarefa rastreavel para o Miguel gerar nova variacao.
+                    task = record_creative_task(
+                        task_type=TASK_FATIGUE,
+                        target_id=metrics.id,
+                        target_name=metrics.name,
+                        reason=f"Frequência {metrics.frequency:.1f} — criativo fatigado, precisa de nova variação",
                         data=f"Frequência: {metrics.frequency:.1f} | CTR caiu para {metrics.ctr:.1f}%",
-                        estimated_impact="Recuperação de CTR e redução de CPL esperada",
                     )
+                    self.wa.send_message(
+                        f"Caio: criativo fatigado em '{metrics.name}' "
+                        f"(freq {metrics.frequency:.1f}). Tarefa criada para o Miguel: nova variação."
+                    )
+                    result.creative_tasks.append(task.to_record())
+                    continue
                 elif req == "duplicate_ad_set_budget_exceeded":
                     api_result = self.wa.send_approval_request(
                         action_name=f"Duplicar Ad Set: {metrics.name}",

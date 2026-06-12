@@ -14,6 +14,7 @@ HARNESSES = [
     ("test_approve", ROOT / "harnesses" / "test_approve.py"),
     ("test_traffic_skills", ROOT / "harnesses" / "test_traffic_skills.py"),
     ("test_calibration", ROOT / "harnesses" / "test_calibration.py"),
+    ("test_campaign_inbox", ROOT / "harnesses" / "test_campaign_inbox.py"),
 ]
 
 
