@@ -22,8 +22,12 @@ thresholds:
 
 # GUARDRAILS FINANCEIROS
 budget:
-  max_daily_per_adset: 0.00   # R$ — DEFINIR COM FERNANDO (bloqueante para go-live)
+  max_daily_per_adset: 50.00  # R$ - default conservador do MVP
+  max_daily_account_spend: 300.00  # R$ - placeholder ate Fernando/Caue aprovarem tetos reais
+  max_new_adsets_per_day: 0   # escala autonoma bloqueada por default
+  max_duplications_per_adset_per_day: 0  # escala autonoma bloqueada por default
   max_bid_adjustment: 0.20    # ±20% — limite de ajuste autônomo de bid
+  min_business_signal_to_duplicate: "paid_sale_7d"
 
 # CRITÉRIOS DE AD SET CAMPEÃO
 champion:

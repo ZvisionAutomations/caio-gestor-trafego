@@ -213,7 +213,14 @@ class AnalyzeWorkflow:
                 f"CTR {metrics.ctr:.1f}% por {metrics.days_below_champion_cpl} dias"
             )
             max_budget = self._budget_cfg.get("max_daily_per_adset", 0.0)
-            if max_budget > 0 and metrics.daily_budget <= max_budget:
+            max_new_adsets = int(self._budget_cfg.get("max_new_adsets_per_day", 0) or 0)
+            max_duplications = int(self._budget_cfg.get("max_duplications_per_adset_per_day", 0) or 0)
+            if (
+                max_budget > 0
+                and metrics.daily_budget <= max_budget
+                and max_new_adsets > 0
+                and max_duplications > 0
+            ):
                 actions.append("duplicate_ad_set")
             else:
                 approvals.append("duplicate_ad_set_budget_exceeded")

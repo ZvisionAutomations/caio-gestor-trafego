@@ -6,6 +6,7 @@ import os
 import json
 from dataclasses import dataclass, field
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
@@ -1087,6 +1088,105 @@ class MetaAdsTool:
             return {"success": False, "adset_id": adset_id, "error": str(exc)}
 
     # ── Helpers ────────────────────────────────────────────────────────────
+
+    def create_paused_campaign_package(self, package: dict[str, Any]) -> dict[str, Any]:
+        """
+        Create campaign, one ad set and ads from Campaign Inbox translated payload.
+        Every Meta object is forced to PAUSED regardless of manifest input.
+        """
+        campaign_params = dict(package["campaign"])
+        campaign_params["status"] = "PAUSED"
+        adset_params = dict(package["adset"])
+        adset_params["status"] = "PAUSED"
+        ads = list(package.get("ads", []))
+
+        try:
+            campaign = self._account.create_campaign(fields=[], params=campaign_params)
+            campaign_id = str(campaign["id"])
+
+            adset_params["campaign_id"] = campaign_id
+            adset = self._account.create_ad_set(fields=[], params=adset_params)
+            adset_id = str(adset["id"])
+
+            created_ads: list[dict[str, Any]] = []
+            for ad_payload in ads:
+                creative = self._create_ctwa_creative(ad_payload)
+                ad_params = {
+                    "name": ad_payload["name"],
+                    "adset_id": adset_id,
+                    "creative": {"creative_id": creative["id"]},
+                    "status": "PAUSED",
+                }
+                ad = self._account.create_ad(fields=[], params=ad_params)
+                created_ads.append(
+                    {
+                        "ad_id": str(ad["id"]),
+                        "creative_id": str(creative["id"]),
+                        "status": "PAUSED",
+                    }
+                )
+
+            return {
+                "success": True,
+                "campaign_id": campaign_id,
+                "adset_id": adset_id,
+                "ads": created_ads,
+                "status": "PAUSED",
+            }
+        except Exception as exc:
+            logger.error("Erro ao criar pacote de campanha pausado: %s", exc)
+            return {"success": False, "error": str(exc), "status": "PAUSED"}
+
+    def _create_ctwa_creative(self, ad_payload: dict[str, Any]) -> dict[str, Any]:
+        asset_path = Path(ad_payload["asset_path"])
+        creative_params = {
+            "name": ad_payload["name"],
+            "object_story_spec": {
+                "page_id": ad_payload["page_id"],
+                "video_data" if ad_payload["format"] == "video" else "link_data": self._story_data(
+                    ad_payload, asset_path
+                ),
+            },
+        }
+        creative = self._account.create_ad_creative(fields=[], params=creative_params)
+        return _sdk_to_dict(creative)
+
+    def _story_data(self, ad_payload: dict[str, Any], asset_path: Path) -> dict[str, Any]:
+        cta = {
+            "type": ad_payload.get("cta", "SEND_MESSAGE"),
+            "value": {"app_destination": "WHATSAPP"},
+        }
+        if ad_payload["format"] == "video":
+            video_id = self._upload_video_asset(asset_path)
+            return {
+                "video_id": video_id,
+                "message": ad_payload["primary_text"],
+                "title": ad_payload["headline"],
+                "call_to_action": cta,
+            }
+        image_hash = self._upload_image_asset(asset_path)
+        return {
+            "message": ad_payload["primary_text"],
+            "name": ad_payload["headline"],
+            "image_hash": image_hash,
+            "call_to_action": cta,
+        }
+
+    def _upload_video_asset(self, asset_path: Path) -> str:
+        with open(asset_path, "rb") as source:
+            video = self._account.create_ad_video(fields=[], params={"source": source})
+        return str(video["id"])
+
+    def _upload_image_asset(self, asset_path: Path) -> str:
+        image = self._account.create_ad_image(fields=[], params={"filename": str(asset_path)})
+        data = _sdk_to_dict(image)
+        if "hash" in data:
+            return str(data["hash"])
+        images = data.get("images", {})
+        if images:
+            first = next(iter(images.values()))
+            return str(first.get("hash", ""))
+        raise ValueError("Meta image upload did not return image hash")
 
     def _fetch_adset_insights_raw(self, adset_id: str, date_preset: str) -> dict | None:
         try:

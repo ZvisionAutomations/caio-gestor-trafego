@@ -6,8 +6,12 @@ config/.env
 # Logs gerados em runtime
 logs/*.log
 logs/*.txt
+logs/*.jsonl
 !logs/.gitkeep
 .tmp/
+
+# Artefatos de harness
+pytest-cache-files-story039/
 
 # Python
 __pycache__/
