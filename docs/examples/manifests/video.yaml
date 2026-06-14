@@ -1,0 +1,25 @@
+# Exemplo: anúncio VÍDEO (UGC) Click-to-WhatsApp
+# Copie para inbox/<sua-pasta>/manifest.yaml e ponha o vídeo em assets/
+campaign:
+  name: "NW - UGC - Depoimento - 001"
+  product: "new_woman"
+  objective: "OUTCOME_ENGAGEMENT"
+  status_on_upload: "paused"
+  page_id: "<PAGE_ID_DA_FANPAGE>"
+  whatsapp_phone_number: "<NUMERO_WA_DA_LIVIA>"
+  version: "v1"
+adset:
+  name: "Mulheres 45-60 BR"
+  daily_budget_brl: 50
+  age_min: 45
+  age_max: 60
+  gender: "female"
+  locations: ["BR"]
+  optimization_goal: "CONVERSATIONS"
+ads:
+  - name: "UGC Hook 01"
+    format: "video"
+    asset: "assets/ugc.mp4"
+    primary_text: "Veja o depoimento da Maria sobre o New Woman."
+    headline: "Fale conosco no WhatsApp"
+    cta: "SEND_MESSAGE"   # go-live: confirmar WHATSAPP_MESSAGE

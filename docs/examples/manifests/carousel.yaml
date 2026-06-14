@@ -1,0 +1,33 @@
+# Exemplo: anúncio CARROSSEL (multi-card, mínimo 2 cards) Click-to-WhatsApp
+# Copie para inbox/<sua-pasta>/manifest.yaml e ponha as imagens dos cards em assets/
+campaign:
+  name: "NW - Carrossel - Beneficios - 001"
+  product: "new_woman"
+  objective: "OUTCOME_ENGAGEMENT"
+  status_on_upload: "paused"
+  page_id: "<PAGE_ID_DA_FANPAGE>"
+  whatsapp_phone_number: "<NUMERO_WA_DA_LIVIA>"
+  version: "v1"
+adset:
+  name: "Mulheres 45-60 BR"
+  daily_budget_brl: 50
+  age_min: 45
+  age_max: 60
+  gender: "female"
+  locations: ["BR"]
+  optimization_goal: "CONVERSATIONS"
+ads:
+  - name: "Carrossel Beneficios 01"
+    format: "carousel"
+    primary_text: "Conheça os benefícios do New Woman."
+    headline: "Equilíbrio no climatério"
+    cards:
+      - asset: "assets/card1.jpg"
+        headline: "Menos calores"
+        primary_text: "Alívio das ondas de calor."
+      - asset: "assets/card2.jpg"
+        headline: "Sono melhor"
+        primary_text: "Noites mais tranquilas."
+      - asset: "assets/card3.jpg"
+        headline: "Mais disposição"
+        link: "https://wa.me/<NUMERO_WA_DA_LIVIA>"
