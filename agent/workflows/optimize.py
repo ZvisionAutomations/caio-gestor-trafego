@@ -7,6 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from ..business_signal import (
+    BusinessSignal,
+    BusinessSignalReader,
+    ScaleDecision,
+    evaluate_scale_guardrails,
+)
 from ..creative_tasks import TASK_FATIGUE, record_creative_task
 from ..tools.meta_ads import MetaAdsTool
 from ..tools.whatsapp import WhatsAppTool
@@ -52,10 +58,45 @@ class OptimizeWorkflow:
         self,
         meta_tool: MetaAdsTool,
         whatsapp_tool: WhatsAppTool,
+        business_signal_reader: BusinessSignalReader | None = None,
+        max_new_adsets_per_day: int = 0,
+        max_duplications_per_adset_per_day: int = 0,
+        tenant_id: str = "",
+        signal_days: int = 7,
     ) -> None:
         self.meta = meta_tool
         self.wa = whatsapp_tool
+        # Trava de escala (story-060): sem reader/tetos → escala bloqueada (lado seguro)
+        self.signal_reader = business_signal_reader
+        self.max_new_adsets_per_day = max_new_adsets_per_day
+        self.max_duplications_per_adset_per_day = max_duplications_per_adset_per_day
+        self.tenant_id = tenant_id
+        self.signal_days = signal_days
         _LOG_DIR.mkdir(exist_ok=True)
+
+    def _read_signal(self, adset_id: str) -> BusinessSignal:
+        """Lê o business signal (async) de forma síncrona e fail-safe.
+
+        Sem reader, sem DB ou em qualquer erro → sinal vazio (escala bloqueada).
+        """
+        if self.signal_reader is None:
+            return BusinessSignal("", adset_id, "", 0, 0)
+        try:
+            import asyncio
+
+            return asyncio.run(
+                self.signal_reader.get_adset_signal(self.tenant_id, adset_id, self.signal_days)
+            )
+        except Exception as exc:  # noqa: BLE001 — fail-safe: erro → bloqueia escala
+            logger.warning("Business signal indisponível p/ %s (bloqueando escala): %s", adset_id, exc)
+            return BusinessSignal("", adset_id, "", 0, 0)
+
+    def _scale_decision(self, adset_id: str) -> ScaleDecision:
+        return evaluate_scale_guardrails(
+            business_signal=self._read_signal(adset_id),
+            max_new_adsets_per_day=self.max_new_adsets_per_day,
+            max_duplications_per_adset_per_day=self.max_duplications_per_adset_per_day,
+        )
 
     def run(self, analysis: AnalysisResult) -> OptimizeResult:
         """
@@ -146,6 +187,19 @@ class OptimizeWorkflow:
                     ))
 
                 elif action == "duplicate_ad_set":
+                    decision = self._scale_decision(metrics.id)
+                    if not decision.allowed:
+                        result.actions_taken.append(ActionLog(
+                            timestamp=ts,
+                            action="DUPLICAÇÃO BLOQUEADA — guardrail",
+                            target_id=metrics.id,
+                            target_name=metrics.name,
+                            reason=decision.reason,
+                            data=f"CPL: R${metrics.cpl:.2f} | ROAS: {metrics.roas:.1f}x",
+                            result="BLOQUEADO",
+                            autonomous=True,
+                        ))
+                        continue
                     new_budget = metrics.daily_budget
                     api_result = self.meta.duplicate_ad_set(metrics.id, new_budget)
                     result.actions_taken.append(ActionLog(

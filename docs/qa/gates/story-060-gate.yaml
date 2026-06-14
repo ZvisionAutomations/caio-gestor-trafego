@@ -1,0 +1,28 @@
+schema: 1
+story: "060"
+title: "Conectar a trava de escala (business signal) ao ciclo de otimização"
+gate: PASS
+status_reason: "Duplicação autônoma agora gated por business signal + tetos; fail-safe comprovado (sem reader/DB/erro → bloqueia); 14/14 harnesses, ruff/mypy limpos; sem regressão."
+reviewer: "Litmus (@quality-gate)"
+updated: "2026-06-14T17:15:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests:
+    new: "harnesses/test_scale_guardrail.py — allowed (venda paga + tetos); blocked (sem venda); blocked (tetos 0 mesmo com venda); blocked default (sem reader); fail-safe (reader erro → bloqueia)"
+    suite: "14/14 harnesses PASS (WSL py3.14); test_campaign_inbox/test_fatigue inalterados = sem regressão"
+    lint: "ruff All passed (optimize, main, harness); mypy Success (optimize); main.py compila"
+  ac_traceability:
+    AC-1: "PASS — _execute_autonomous_actions/duplicate_ad_set consulta _scale_decision (BusinessSignalReader + evaluate_scale_guardrails) antes da API"
+    AC-2: "PASS — bloqueio registra ActionLog 'DUPLICAÇÃO BLOQUEADA — guardrail' + reason; meta.duplicate_ad_set NÃO chamado"
+    AC-3: "PASS — _read_signal fail-safe: sem reader/sem DB/erro → BusinessSignal vazio → has_paid_sale False → bloqueia; nunca derruba o ciclo"
+    AC-4: "PASS — pause/adjust_bid/aprovação inalterados; suíte sem regressão"
+    AC-5: "PASS — harness novo + suíte verde; ruff/mypy limpos"
+nfr_validation:
+  security: { status: PASS, notes: "trava de segurança financeira; default bloqueia (lado seguro)" }
+  reliability: { status: PASS, notes: "fail-safe em todas as ausências (reader/DB/erro)" }
+  maintainability: { status: PASS, notes: "reusa business_signal.py (story-039) sem duplicar lógica" }
+deploy_notes: "Agente Caio não roda na VPS ainda. Em prod a trava só LIBERA escala com CAIO_DATABASE_URL setado (sinal real) + tetos>0 no settings + venda paga atribuída. Até lá: bloqueia (correto)."
+recommendations:
+  future:
+    - "Definir CAIO_SIGNAL_TENANT_ID por produto (hoje default '' → bloqueia até configurar)."
