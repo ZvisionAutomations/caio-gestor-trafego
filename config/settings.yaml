@@ -5,7 +5,9 @@ agent:
   name: "Caio"
   role: "Gestor de Tráfego Raiz Vital"
   version: "1.0.0"
-  llm_model: "claude-sonnet-4-6"
+  # Cérebro de tool-calling (story-057). Músculo de texto puro = Gemini 2.5
+  # Flash-Lite, roteado em agent/llm_router.py.
+  llm_model: "claude-haiku-4-5-20251001"
 
 # THRESHOLDS DE PERFORMANCE (defaults — recalibrar aos 7 dias)
 thresholds:
@@ -36,6 +38,12 @@ champion:
   min_ctr: 3.0             # % — CTR mínimo para campeão
   min_roas: 3.0            # ROAS mínimo para campeão
   min_clicks: 500          # Volume mínimo de cliques
+
+# RELATÓRIO DIÁRIO
+report:
+  # Narrativa executiva opcional gerada pelo músculo (Gemini Flash-Lite).
+  # Fail-safe: qualquer erro/ausência de chave → relatório determinístico intacto.
+  executive_narrative: true
 
 # CICLOS DE OPERAÇÃO
 schedule:

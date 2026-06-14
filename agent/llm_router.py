@@ -1,11 +1,19 @@
 """LLM Router — roteia tarefas para o modelo mais custo-eficiente.
 
-Estratégia:
-  - Groq Llama 3.1 70B: tarefas rotineiras (formatação, classificação simples, relatórios de texto)
-  - Claude Sonnet 4.6: decisões complexas, aprovações, recomendações criativas
+Stack (story-057):
+  - Gemini 2.5 Flash-Lite (músculo): tarefas rotineiras de TEXTO PURO —
+    classificação simples e geração de texto de relatório (sem tool-calling).
+  - Claude Haiku 4.5 (cérebro): decisões com trade-offs, aprovações, recomendações.
 
-Referência: compass_artifact Zvision — "mantenha Groq como músculo de baixo custo,
-promova Claude Sonnet 4.5 com prompt caching ao núcleo de raciocínio"
+O cérebro de tool-calling do agente Agno vive em `caio.py`
+(`Agent(model=Claude(id=...))`). Este router é um helper de baixo custo para
+tarefas de texto puro nos workflows (ex.: narrativa executiva do relatório).
+
+Fail-safe: sem GOOGLE_API_KEY, as tarefas de músculo caem graciosamente no
+cérebro Claude. O boot NUNCA quebra por ausência de chave.
+
+SDK: google-genai (unificado). O legado google-generativeai foi descontinuado
+em 2025-11-30 e não deve ser usado.
 """
 from __future__ import annotations
 
@@ -16,80 +24,78 @@ from typing import Any
 
 logger = logging.getLogger("caio.llm_router")
 
+# IDs de modelo (story-057 / gate de research D9)
+MUSCLE_MODEL = "gemini-2.5-flash-lite"
+BRAIN_MODEL = "claude-haiku-4-5-20251001"
+
 
 class TaskType(str, Enum):
-    REPORT_GENERATION = "report_generation"      # Groq — gera texto de relatório
-    CLASSIFICATION = "classification"            # Groq — classifica estado simples
-    COMPLEX_DECISION = "complex_decision"        # Claude — decisão com trade-offs
-    APPROVAL_REASONING = "approval_reasoning"    # Claude — avaliar e redigir pedido de aprovação
-    CREATIVE_RECOMMENDATION = "creative_recommendation"  # Claude — recomendar novo criativo
+    REPORT_GENERATION = "report_generation"      # músculo — gera texto de relatório
+    CLASSIFICATION = "classification"            # músculo — classifica estado simples
+    COMPLEX_DECISION = "complex_decision"        # cérebro — decisão com trade-offs
+    APPROVAL_REASONING = "approval_reasoning"    # cérebro — avaliar/redigir aprovação
+    CREATIVE_RECOMMENDATION = "creative_recommendation"  # cérebro — recomendar criativo
 
 
 class LLMRouter:
     """
-    Roteia chamadas LLM para o modelo mais adequado por custo × qualidade.
+    Roteia chamadas LLM por custo × qualidade.
 
-    Groq (Llama 3.1 70B): ~$0.59/1M tokens → tarefas de formatação e texto estruturado
-    Claude Sonnet 4.6: ~$3/1M tokens input → raciocínio e decisões complexas
+    Gemini 2.5 Flash-Lite (~$0,10/$0,40 por 1M tok in/out): texto rotineiro.
+    Claude Haiku 4.5: raciocínio, decisões e tool-calling.
     """
 
-    GROQ_TASKS = {TaskType.REPORT_GENERATION, TaskType.CLASSIFICATION}
-    CLAUDE_TASKS = {
+    MUSCLE_TASKS = {TaskType.REPORT_GENERATION, TaskType.CLASSIFICATION}
+    BRAIN_TASKS = {
         TaskType.COMPLEX_DECISION,
         TaskType.APPROVAL_REASONING,
         TaskType.CREATIVE_RECOMMENDATION,
     }
 
     def __init__(self) -> None:
-        self._groq_available = self._check_groq()
-        if not self._groq_available:
-            logger.warning("GROQ_API_KEY não encontrado — todas as tarefas usarão Claude")
+        self._gemini_available = self._check_gemini()
+        if not self._gemini_available:
+            logger.warning(
+                "GOOGLE_API_KEY/GEMINI_API_KEY ausente — tarefas de músculo "
+                "usarão o cérebro Claude (fallback gracioso)"
+            )
 
     def route(self, task_type: TaskType, prompt: str, system: str = "") -> str:
-        """
-        Executa a chamada LLM no modelo correto para o tipo de tarefa.
-
-        Args:
-            task_type: Tipo da tarefa — determina qual modelo usar
-            prompt: Prompt do usuário
-            system: Prompt de sistema (opcional)
-
-        Returns:
-            Texto gerado pelo modelo
-        """
-        if task_type in self.GROQ_TASKS and self._groq_available:
-            return self._call_groq(prompt, system)
+        """Executa a chamada LLM no modelo correto para o tipo de tarefa."""
+        if task_type in self.MUSCLE_TASKS and self._gemini_available:
+            return self._call_gemini(prompt, system)
         return self._call_claude(prompt, system)
 
-    def _call_groq(self, prompt: str, system: str = "") -> str:
-        """Chama Groq Llama 3.1 70B — rápido e barato para tarefas rotineiras."""
+    def _call_gemini(self, prompt: str, system: str = "") -> str:
+        """Chama Gemini 2.5 Flash-Lite via SDK google-genai — barato p/ texto puro."""
         try:
-            from groq import Groq
-            client = Groq(api_key=os.environ["GROQ_API_KEY"])
-            messages: list[Any] = []
-            if system:
-                messages.append({"role": "system", "content": system})
-            messages.append({"role": "user", "content": prompt})
+            from google import genai
+            from google.genai import types
 
-            response = client.chat.completions.create(
-                model="llama-3.1-70b-versatile",
-                messages=messages,
-                temperature=0.3,
-                max_tokens=2048,
+            # Client() lê GOOGLE_API_KEY (ou GEMINI_API_KEY) do ambiente.
+            client = genai.Client()
+            config = (
+                types.GenerateContentConfig(system_instruction=system) if system else None
             )
-            return response.choices[0].message.content or ""
+            response = client.models.generate_content(
+                model=MUSCLE_MODEL,
+                contents=prompt,
+                config=config,
+            )
+            return response.text or ""
         except Exception as exc:
-            logger.warning("Groq falhou, fallback para Claude: %s", exc)
+            logger.warning("Gemini falhou, fallback para Claude: %s", exc)
             return self._call_claude(prompt, system)
 
     def _call_claude(self, prompt: str, system: str = "") -> str:
-        """Chama Claude Sonnet 4.6 — raciocínio de alta qualidade."""
+        """Chama Claude Haiku 4.5 — raciocínio de alta qualidade e baixo custo."""
         try:
             import anthropic
+
             client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
             kwargs: dict[str, Any] = {
-                "model": "claude-sonnet-4-6",
+                "model": BRAIN_MODEL,
                 "max_tokens": 4096,
                 "messages": [{"role": "user", "content": prompt}],
             }
@@ -103,8 +109,8 @@ class LLMRouter:
             raise
 
     @staticmethod
-    def _check_groq() -> bool:
-        return bool(os.environ.get("GROQ_API_KEY"))
+    def _check_gemini() -> bool:
+        return bool(os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY"))
 
 
 # Instância singleton — importar nos workflows

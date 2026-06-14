@@ -128,7 +128,8 @@ def run_report_harness() -> dict:
     optimize_result = _build_mock_optimize_result()
     meta_tool, wa_tool = _build_mock_tools()
 
-    workflow = ReportWorkflow(meta_tool=meta_tool, whatsapp_tool=wa_tool)
+    # narrativa desativada: harness determinístico, sem chamada LLM real
+    workflow = ReportWorkflow(meta_tool=meta_tool, whatsapp_tool=wa_tool, enable_narrative=False)
 
     approvals_pending = [
         {"request": "Criativo novo New Woman", "sent_at": "09:16"}
