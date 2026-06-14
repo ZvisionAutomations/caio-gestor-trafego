@@ -1,7 +1,8 @@
 # Story 057 — Correção e migração da stack LLM do Caio (Gemini Flash + Claude Haiku 4.5)
 
-**Status:** Ready for Review
+**Status:** Done
 **Epic:** Caio Gestor de Tráfego — operacionalização (Raiz Vital)
+**Merged:** caio-gestor-trafego PR #4 (squash na main, 2026-06-14) — QA Gate PASS
 **Validada por:** @product-lead (Axis) — 2026-06-14 — GO (CoVe: rastreável, AC testáveis, gate D9 bloqueante mantido)
 **Track:** Standard
 **Owner sugerido:** @developer (Pixel)
