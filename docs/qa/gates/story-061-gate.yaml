@@ -1,0 +1,17 @@
+schema: 1
+story: "061"
+title: "Contrato documentado da pasta de handoff + exemplos (A3)"
+gate: PASS
+status_reason: "Documentação do contrato + 3 manifestos de exemplo schema-válidos, alinhados ao research CTWA (B1). Sem código, sem regressão."
+reviewer: "Litmus (@quality-gate)"
+updated: "2026-06-14T17:30:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  validation: "image/video/carousel.yaml parseiam contra CampaignManifest (Pydantic) no WSL; carousel com 3 cards; suíte de código 14/14 inalterada"
+  ac_traceability:
+    AC-1: "PASS — docs/handoff-folder-contract.md (estrutura, campos, idempotência/rejeição)"
+    AC-2: "PASS — docs/examples/manifests/*.yaml schema-válidos"
+    AC-3: "PASS — alinhado a docs/research/ctwa-api-requirements.md (B1); CTA flag de go-live documentado"
+    AC-4: "PASS — docs-only, sem regressão"
+deploy_notes: "Docs no repo caio-gestor-trafego. Nada a deployar."
