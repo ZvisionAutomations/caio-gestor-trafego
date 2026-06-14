@@ -1,0 +1,29 @@
+# Serviço do agente Caio para a VPS Raiz Vital (story-062).
+# Deploy: copiar o pacote caio-trafego p/ a VPS (ex. /opt/caio), criar .env.caio
+# (secrets via nano, nunca no git) e subir:
+#   docker compose -f docker-compose.caio.yml --env-file .env.caio up -d --build
+#
+# O Caio lê o Postgres do zwaf em modo read-only (role caio_ro, CAIO_DATABASE_URL)
+# para o Business Signal → por isso entra na rede externa do zwaf.
+services:
+  caio:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: caio-trafego:latest
+    container_name: caio-trafego
+    restart: unless-stopped
+    env_file:
+      - .env.caio
+    volumes:
+      - ./inbox:/app/inbox      # pasta de handoff (depositar pacotes de campanha)
+      - ./logs:/app/logs        # logs e históricos (campaign-inbox-history.jsonl, etc.)
+    networks:
+      - zwaf_net
+
+networks:
+  # Rede externa do stack zwaf (confirmar o nome real na VPS:
+  #   docker network ls | grep zwaf  → normalmente "zwaf_default").
+  zwaf_net:
+    external: true
+    name: zwaf_default

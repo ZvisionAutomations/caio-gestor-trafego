@@ -1,0 +1,23 @@
+schema: 1
+story: "062"
+title: "Artefatos de deploy do agente Caio na VPS (A2)"
+gate: PASS
+status_reason: "Artefatos de deploy completos e coerentes (Dockerfile, compose, .dockerignore, .env.example, runbook); compose YAML válido; secrets fora da imagem. Deploy REAL bloqueado por credenciais Meta (gate Kaue) — fora do escopo desta story."
+reviewer: "Litmus (@quality-gate)"
+updated: "2026-06-14T17:45:00Z"
+waiver: { active: false }
+top_issues:
+  - id: NET-NAME
+    severity: low
+    finding: "Nome da rede externa do zwaf (zwaf_default) precisa ser confirmado na VPS (docker network ls)."
+    suggested_action: "Confirmado no passo 5 do runbook antes do up."
+evidence:
+  ac_traceability:
+    AC-1: "PASS — Dockerfile copia só agent/ + config/settings.yaml; CMD python -m agent.main (entry __main__ correto)"
+    AC-2: "PASS — docker-compose.caio.yml serviço caio, volumes inbox/logs, rede externa"
+    AC-3: "PASS — .dockerignore exclui config/.env/.env.caio/secrets"
+    AC-4: "PASS — .env.example com CAIO_DATABASE_URL + CAIO_SIGNAL_TENANT_ID"
+    AC-5: "PASS — docs/deploy-caio-vps.md (cópia→.env.caio→caio_ro→tetos→rede→up→handoff→go-live→rollback)"
+    AC-6: "PASS — compose YAML válido (yaml.safe_load)"
+  not_executed: "Deploy real NÃO executado — gate externo (credenciais Meta/Kaue). Esperado."
+deploy_notes: "Quando as credenciais chegarem: seguir docs/deploy-caio-vps.md. Claude executa via EC2 Instance Connect; senha caio_ro setada na VPS (sem chat)."

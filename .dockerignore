@@ -1,0 +1,12 @@
+# Nunca copiar segredos/lixo para a imagem do Caio
+config/.env
+.env
+.env.caio
+**/__pycache__/
+*.pyc
+logs/
+inbox/
+pytest-cache-files-*/
+docs/
+harnesses/
+.git/
