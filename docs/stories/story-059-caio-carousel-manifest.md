@@ -1,11 +1,18 @@
 # Story 059 — Suporte a carrossel multi-card no contrato de handoff
 
-**Status:** Ready
+**Status:** Done
 **Epic:** Caio Gestor de Tráfego — operacionalização (Raiz Vital)
 **Track:** Standard
 **Owner sugerido:** @developer (Pixel)
 **Criada por:** @sprint-lead (Sync) — 2026-06-14
-**Validada por:** @product-lead (Axis) — 2026-06-14 — GO (gate R-CAR mantido bloqueante de AC-4/AC-5; retrocompat single-asset coberta; dry-run construível agora)
+**Validada por:** @product-lead (Axis) — 2026-06-14 — GO
+**Implementada/QA:** @developer + @quality-gate — 2026-06-14 — QA Gate PASS (`docs/qa/gates/story-059-gate.yaml`)
+
+### Dev Agent Record (File List)
+- `agent/campaign_inbox.py` (CardSpec + AdSpec.cards + model_validator >=2 cards; validate_assets/_check_asset por card; translate/_translate_ad multi-card)
+- `agent/tools/meta_ads.py` (_create_ctwa_creative ramo carousel + _carousel_link_data child_attachments)
+- `harnesses/test_carousel.py` (novo) + `scripts/run_harnesses.py` (registro)
+QA: 13/13 harnesses, ruff/mypy limpos; retrocompat single-asset preservada (test_campaign_inbox verde). **R-CAR [NEEDS VERIFICATION]:** CTA CTWA exato do carrossel a confirmar contra conta Meta real no go-live (não bloqueia — só executa com credenciais). CodeRabbit WAIVED.
 
 ---
 

@@ -45,6 +45,15 @@ report:
   # Fail-safe: qualquer erro/ausência de chave → relatório determinístico intacto.
   executive_narrative: true
 
+# CAMPAIGN INBOX (story-058) — polling da pasta de handoff
+inbox:
+  enabled: true
+  poll_minutes: 15
+  folder: "inbox"          # raiz da pasta de handoff (relativa ao pacote caio-trafego)
+  # dry_run=true: valida e traduz sem escrever na Meta (default seguro ATÉ as
+  # credenciais Meta do Fernando estarem na VPS). Trocar p/ false no go-live real.
+  dry_run: true
+
 # CICLOS DE OPERAÇÃO
 schedule:
   morning_analysis: "08:00"

@@ -16,6 +16,8 @@ HARNESSES = [
     ("test_calibration", ROOT / "harnesses" / "test_calibration.py"),
     ("test_campaign_inbox", ROOT / "harnesses" / "test_campaign_inbox.py"),
     ("test_llm_router", ROOT / "harnesses" / "test_llm_router.py"),
+    ("test_carousel", ROOT / "harnesses" / "test_carousel.py"),
+    ("test_inbox_poller", ROOT / "harnesses" / "test_inbox_poller.py"),
 ]
 
 

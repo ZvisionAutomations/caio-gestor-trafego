@@ -1138,18 +1138,51 @@ class MetaAdsTool:
             return {"success": False, "error": str(exc), "status": "PAUSED"}
 
     def _create_ctwa_creative(self, ad_payload: dict[str, Any]) -> dict[str, Any]:
-        asset_path = Path(ad_payload["asset_path"])
-        creative_params = {
-            "name": ad_payload["name"],
-            "object_story_spec": {
+        if ad_payload["format"] == "carousel":
+            story_spec: dict[str, Any] = {
                 "page_id": ad_payload["page_id"],
-                "video_data" if ad_payload["format"] == "video" else "link_data": self._story_data(
-                    ad_payload, asset_path
-                ),
-            },
-        }
+                "link_data": self._carousel_link_data(ad_payload),
+            }
+        else:
+            asset_path = Path(ad_payload["asset_path"])
+            key = "video_data" if ad_payload["format"] == "video" else "link_data"
+            story_spec = {
+                "page_id": ad_payload["page_id"],
+                key: self._story_data(ad_payload, asset_path),
+            }
+        creative_params = {"name": ad_payload["name"], "object_story_spec": story_spec}
         creative = self._account.create_ad_creative(fields=[], params=creative_params)
         return _sdk_to_dict(creative)
+
+    def _carousel_link_data(self, ad_payload: dict[str, Any]) -> dict[str, Any]:
+        """Monta link_data.child_attachments p/ carrossel CTWA (story-059).
+
+        NOTE [NEEDS VERIFICATION] (gate R-CAR): o formato exato do call_to_action
+        Click-to-WhatsApp em carrossel deve ser confirmado contra uma conta Meta
+        real. Segue o shape padrão link_data.child_attachments + o mesmo CTA
+        (app_destination=WHATSAPP) já usado nos creatives single-asset.
+        """
+        cta = {
+            "type": ad_payload.get("cta", "SEND_MESSAGE"),
+            "value": {"app_destination": "WHATSAPP"},
+        }
+        child_attachments: list[dict[str, Any]] = []
+        for card in ad_payload["cards"]:
+            attachment: dict[str, Any] = {
+                "image_hash": self._upload_image_asset(Path(card["asset_path"])),
+                "name": card["headline"],
+                "call_to_action": cta,
+            }
+            if card.get("primary_text"):
+                attachment["description"] = card["primary_text"]
+            if card.get("link"):
+                attachment["link"] = card["link"]
+            child_attachments.append(attachment)
+        return {
+            "message": ad_payload["primary_text"],
+            "child_attachments": child_attachments,
+            "call_to_action": cta,
+        }
 
     def _story_data(self, ad_payload: dict[str, Any], asset_path: Path) -> dict[str, Any]:
         cta = {

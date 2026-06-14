@@ -1,11 +1,20 @@
 # Story 058 — Campaign Inbox no ciclo automático do scheduler
 
-**Status:** Ready
+**Status:** Done
 **Epic:** Caio Gestor de Tráfego — operacionalização (Raiz Vital)
 **Track:** Standard
 **Owner sugerido:** @developer (Pixel)
 **Criada por:** @sprint-lead (Sync) — 2026-06-14
-**Validada por:** @product-lead (Axis) — 2026-06-14 — GO (AC testáveis, dry-run construível agora, dep Meta só p/ go-live real)
+**Validada por:** @product-lead (Axis) — 2026-06-14 — GO
+**Implementada/QA:** @developer + @quality-gate — 2026-06-14 — QA Gate PASS (`docs/qa/gates/story-058-gate.yaml`)
+
+### Dev Agent Record (File List)
+- `agent/inbox_poller.py` (novo — discover/mark/poll_once idempotente + fail-safe)
+- `agent/tools/scheduler.py` (register_inbox_poll, IntervalTrigger)
+- `agent/main.py` (_load_inbox_settings + inbox_cycle + registro condicional)
+- `config/settings.yaml` (bloco `inbox`: enabled/poll_minutes/folder/dry_run)
+- `harnesses/test_inbox_poller.py` (novo) + `scripts/run_harnesses.py` (registro)
+QA: 13/13 harnesses, ruff/mypy limpos. Idempotência por marcador `.caio_processed` (só marca `uploaded_paused`). Dry-run default seguro. CodeRabbit WAIVED.
 
 ---
 

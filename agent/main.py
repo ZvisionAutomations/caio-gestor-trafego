@@ -16,12 +16,27 @@ logging.basicConfig(
 logger = logging.getLogger("caio.main")
 
 
+def _load_inbox_settings() -> dict:
+    """Lê o bloco `inbox` do settings.yaml (fail-safe com defaults seguros)."""
+    import yaml
+
+    settings_path = Path(__file__).parent.parent / "config" / "settings.yaml"
+    try:
+        data = yaml.safe_load(settings_path.read_text(encoding="utf-8")) or {}
+        return dict(data.get("inbox", {}))
+    except Exception as exc:  # noqa: BLE001 — config nunca derruba o boot
+        logger.warning("Não foi possível ler inbox do settings.yaml: %s", exc)
+        return {}
+
+
 def main() -> None:
+    from .inbox_poller import poll_once
     from .tools.meta_ads import MetaAdsTool
     from .tools.whatsapp import WhatsAppTool
     from .tools.scheduler import CaioScheduler
     from .workflows.analyze import AnalyzeWorkflow
     from .workflows.calibrate import CalibrationWorkflow
+    from .workflows.campaign_inbox import CampaignInboxWorkflow
     from .workflows.optimize import OptimizeWorkflow
     from .workflows.report import ReportWorkflow
 
@@ -62,10 +77,21 @@ def main() -> None:
         proposal = calibration_wf.build_proposal(analysis)
         wa.send_message(proposal.render_message())
 
+    inbox_cfg = _load_inbox_settings()
+    inbox_wf = CampaignInboxWorkflow(meta, wa)
+    inbox_root = Path(__file__).parent.parent / str(inbox_cfg.get("folder", "inbox"))
+    inbox_dry_run = bool(inbox_cfg.get("dry_run", True))
+
+    def inbox_cycle() -> None:
+        logger.info("=== Campaign Inbox Poll (dry_run=%s) ===", inbox_dry_run)
+        poll_once(inbox_root, inbox_wf, dry_run=inbox_dry_run)
+
     scheduler.register_morning_analysis(morning_cycle)
     scheduler.register_afternoon_check(afternoon_cycle)
     scheduler.register_daily_report(daily_report_cycle)
     scheduler.register_threshold_recalibration(recalibrate_thresholds, after_days=7)
+    if inbox_cfg.get("enabled", True):
+        scheduler.register_inbox_poll(inbox_cycle, minutes=int(inbox_cfg.get("poll_minutes", 15)))
 
     wa.send_message("🟢 Caio online. Monitorando campanhas Meta Ads 24/7. Raiz Vital.")
 

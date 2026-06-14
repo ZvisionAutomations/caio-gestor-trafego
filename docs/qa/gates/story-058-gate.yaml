@@ -1,0 +1,29 @@
+schema: 1
+story: "058"
+title: "Campaign Inbox no ciclo automático do scheduler"
+gate: PASS
+status_reason: "Polling idempotente + fail-safe implementados e cobertos por harness; suíte 13/13, ruff+mypy limpos; dry-run default seguro (sem credenciais Meta não quebra)."
+reviewer: "Litmus (@quality-gate)"
+updated: "2026-06-14T16:45:00Z"
+waiver: { active: false }
+top_issues: []
+evidence:
+  tests:
+    new: "harnesses/test_inbox_poller.py — discover (ignora não-pacotes e marcados), poll dry-run + marcação, idempotência (2º poll não reprocessa), fail-safe (inválido não marcado, válido processado)"
+    suite: "13/13 harnesses PASS (WSL py3.14)"
+    lint: "ruff All passed; mypy Success (inbox_poller, scheduler, campaign_inbox); main.py compila + ruff/mypy OK"
+  ac_traceability:
+    AC-1: "PASS — CaioScheduler.register_inbox_poll (IntervalTrigger, coalesce, max_instances=1); wiring em main.py condicionado a inbox.enabled"
+    AC-2: "PASS — poll_once processa subpastas com manifest.yaml via CampaignInboxWorkflow"
+    AC-3: "PASS — idempotência por marcador .caio_processed; só marca status=uploaded_paused; teste de 2º poll vazio"
+    AC-4: "PASS — try/except por pacote; inválido NÃO marcado (retry); não derruba o lote (teste failsafe)"
+    AC-5: "PASS — flag inbox.dry_run no settings.yaml (default true); main lê e injeta; sem credenciais não quebra"
+    AC-6: "PASS — harness novo + suíte verde; ruff/mypy limpos"
+nfr_validation:
+  reliability: { status: PASS, notes: "fail-safe por pacote; config nunca derruba boot (_load_inbox_settings)" }
+  security: { status: PASS, notes: "sem secrets; dry-run default" }
+  maintainability: { status: PASS, notes: "reusa CampaignInboxWorkflow (story-039), sem duplicar parser" }
+deploy_notes: "Agente Caio não roda na VPS ainda → sem deploy-por-cópia. Go-live real do upload depende das credenciais Meta (Fernando); dry-run cobre até lá."
+recommendations:
+  future:
+    - "Ao deployar o agente Caio, validar polling real (dry_run=false) com credenciais Meta."
