@@ -6,6 +6,7 @@ from typing import Callable
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger("caio.tools.scheduler")
 
@@ -55,6 +56,20 @@ class CaioScheduler:
             misfire_grace_time=300,
         )
         logger.info("Relatório diário registrado — 20:30 %s", self._timezone)
+
+    def register_inbox_poll(self, func: Callable, minutes: int = 15) -> None:
+        """Registra o polling da pasta de handoff do Campaign Inbox (story-058)."""
+        self._scheduler.add_job(
+            func,
+            IntervalTrigger(minutes=minutes, timezone=self._timezone),
+            id="inbox_poll",
+            name="Campaign Inbox Poll",
+            replace_existing=True,
+            misfire_grace_time=300,
+            coalesce=True,
+            max_instances=1,
+        )
+        logger.info("Ciclo de inbox registrado — a cada %d min", minutes)
 
     def register_threshold_recalibration(self, func: Callable, after_days: int = 7) -> None:
         """

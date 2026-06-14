@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, ValidationError, field_validator
+from pydantic import BaseModel, Field, ValidationError, field_validator, model_validator
 
 
 class CampaignSpec(BaseModel):
@@ -81,10 +81,21 @@ class AdSetSpec(BaseModel):
         return targeting
 
 
+class CardSpec(BaseModel):
+    """Um card de um anúncio em carrossel (story-059)."""
+
+    asset: str
+    headline: str
+    primary_text: str = ""
+    link: str = ""
+
+
 class AdSpec(BaseModel):
     name: str
     format: str
-    asset: str
+    # `asset` é exigido p/ image/video; carrossel usa `cards` (>=2). Ver model_validator.
+    asset: str = ""
+    cards: list[CardSpec] | None = None
     primary_text: str
     headline: str
     cta: str = "SEND_MESSAGE"
@@ -96,6 +107,16 @@ class AdSpec(BaseModel):
         if normalized not in {"video", "image", "static", "carousel"}:
             raise ValueError("ad.format must be video, image/static or carousel")
         return "image" if normalized == "static" else normalized
+
+    @model_validator(mode="after")
+    def validate_format_shape(self) -> "AdSpec":
+        if self.format == "carousel":
+            if not self.cards or len(self.cards) < 2:
+                raise ValueError("carousel ad requires at least 2 cards")
+        else:
+            if not self.asset:
+                raise ValueError(f"{self.format} ad requires 'asset'")
+        return self
 
 
 class CampaignManifest(BaseModel):
@@ -141,21 +162,33 @@ class InboxPackage:
                 "promoted_object": promoted_object,
                 "status": "PAUSED",
             },
-            "ads": [
-                {
-                    "name": ad.name,
-                    "format": ad.format,
-                    "asset_path": str((self.folder / ad.asset).resolve()),
-                    "primary_text": ad.primary_text,
-                    "headline": ad.headline,
-                    "cta": ad.cta,
-                    "page_id": campaign.page_id,
-                    "whatsapp_phone_number": campaign.whatsapp_phone_number,
-                    "status": "PAUSED",
-                }
-                for ad in self.manifest.ads
-            ],
+            "ads": [self._translate_ad(ad, campaign) for ad in self.manifest.ads],
         }
+
+    def _translate_ad(self, ad: "AdSpec", campaign: "CampaignSpec") -> dict[str, Any]:
+        base: dict[str, Any] = {
+            "name": ad.name,
+            "format": ad.format,
+            "primary_text": ad.primary_text,
+            "headline": ad.headline,
+            "cta": ad.cta,
+            "page_id": campaign.page_id,
+            "whatsapp_phone_number": campaign.whatsapp_phone_number,
+            "status": "PAUSED",
+        }
+        if ad.format == "carousel":
+            base["cards"] = [
+                {
+                    "asset_path": str((self.folder / card.asset).resolve()),
+                    "headline": card.headline,
+                    "primary_text": card.primary_text,
+                    "link": card.link,
+                }
+                for card in (ad.cards or [])
+            ]
+        else:
+            base["asset_path"] = str((self.folder / ad.asset).resolve())
+        return base
 
 
 def load_inbox_package(folder: str | Path) -> InboxPackage:
@@ -184,9 +217,20 @@ def load_inbox_package(folder: str | Path) -> InboxPackage:
 def validate_assets(package: InboxPackage) -> list[ValidationIssue]:
     issues: list[ValidationIssue] = []
     for idx, ad in enumerate(package.manifest.ads):
-        asset_path = package.folder / ad.asset
-        if not asset_path.exists():
-            issues.append(ValidationIssue(f"ads[{idx}].asset", f"asset not found: {ad.asset}"))
-        elif asset_path.is_dir():
-            issues.append(ValidationIssue(f"ads[{idx}].asset", f"asset is a directory: {ad.asset}"))
+        if ad.format == "carousel":
+            for cidx, card in enumerate(ad.cards or []):
+                issues.extend(
+                    _check_asset(package.folder, card.asset, f"ads[{idx}].cards[{cidx}].asset")
+                )
+        else:
+            issues.extend(_check_asset(package.folder, ad.asset, f"ads[{idx}].asset"))
     return issues
+
+
+def _check_asset(folder: Path, asset: str, field: str) -> list[ValidationIssue]:
+    asset_path = folder / asset
+    if not asset_path.exists():
+        return [ValidationIssue(field, f"asset not found: {asset}")]
+    if asset_path.is_dir():
+        return [ValidationIssue(field, f"asset is a directory: {asset}")]
+    return []

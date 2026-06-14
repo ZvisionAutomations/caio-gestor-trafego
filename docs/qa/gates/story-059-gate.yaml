@@ -1,0 +1,34 @@
+schema: 1
+story: "059"
+title: "Suporte a carrossel multi-card no contrato de handoff"
+gate: PASS
+status_reason: "Contrato multi-card + translate + validação implementados e cobertos por harness; retrocompat single-asset preservada; camada de criação Meta montada com o CTA CTWA marcado [NEEDS VERIFICATION] (gate R-CAR) — aceitável pois só executa com credenciais reais."
+reviewer: "Litmus (@quality-gate)"
+updated: "2026-06-14T16:45:00Z"
+waiver: { active: false }
+top_issues:
+  - id: R-CAR
+    severity: low
+    finding: "Formato exato do call_to_action Click-to-WhatsApp em carrossel (child_attachments) não pôde ser confirmado via docs públicas da Meta nesta sessão."
+    suggested_action: "Confirmar contra conta Meta real no go-live (mesmo caveat já existente no _create_ctwa_creative/promoted_object CTWA). Não bloqueia: só executa com credenciais Meta."
+evidence:
+  tests:
+    new: "harnesses/test_carousel.py — translate multi-card; <2 cards rejeitado; asset de card faltante rejeitado; image/video single-asset sem regressão"
+    suite: "13/13 harnesses PASS (WSL py3.14); test_campaign_inbox (single-asset) segue verde = retrocompat OK"
+    lint: "ruff All passed; mypy Success (campaign_inbox)"
+  ac_traceability:
+    AC-1: "PASS — CardSpec + AdSpec.cards + model_validator exige >=2 cards p/ carousel"
+    AC-2: "PASS — image/static/video continuam usando asset único (model_validator exige asset); test_single_asset_backcompat + test_campaign_inbox verdes"
+    AC-3: "PASS — validate_assets/_check_asset cobre cada card; teste de card faltante"
+    AC-4: "PASS — translate()/_translate_ad emite cards[] (asset_path/headline/primary_text/link) p/ carousel; single-asset mantém asset_path"
+    AC-5: "PASS (com R-CAR) — meta_ads._carousel_link_data monta link_data.child_attachments; CTA CTWA [NEEDS VERIFICATION] contra conta real"
+    AC-6: "PASS — harness novo + suíte verde; ruff/mypy limpos"
+nfr_validation:
+  maintainability: { status: PASS, notes: "estende o parser/translate da story-039 sem reescrever; helper _translate_ad/_check_asset" }
+  reliability: { status: PASS, notes: "validação condicional por formato; retrocompat coberta por teste" }
+  security: { status: PASS, notes: "sem secrets" }
+deploy_notes: "Camada de criação só executa com credenciais Meta (Fernando) + SDK facebook-business. Contrato/translate 100% testável agora em dry-run."
+recommendations:
+  immediate: []
+  future:
+    - "Resolver R-CAR (object_story_spec carrossel CTWA) contra conta real antes do primeiro upload de carrossel."
