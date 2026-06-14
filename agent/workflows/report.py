@@ -7,6 +7,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 from ..tools.meta_ads import MetaAdsTool
 from ..tools.whatsapp import WhatsAppTool
 from .analyze import AnalysisResult, AdSetState
@@ -15,7 +17,17 @@ from .optimize import ActionLog, OptimizeResult
 logger = logging.getLogger("caio.workflows.report")
 
 _LOG_DIR = Path(__file__).parent.parent.parent / "logs"
+_SETTINGS_PATH = Path(__file__).parent.parent.parent / "config" / "settings.yaml"
 _MAX_WA_MESSAGE_CHARS = 4000  # Limite prático de mensagem WA
+
+
+def _narrative_enabled() -> bool:
+    """Lê report.executive_narrative do settings.yaml (default True), fail-safe."""
+    try:
+        data = yaml.safe_load(_SETTINGS_PATH.read_text(encoding="utf-8")) or {}
+        return bool(data.get("report", {}).get("executive_narrative", True))
+    except Exception:  # noqa: BLE001 — toggle nunca pode quebrar o relatório
+        return True
 
 
 @dataclass
@@ -31,6 +43,7 @@ class DailyReport:
     anomalies: list[str]
     recommendations: list[str]
     raw_text: str = ""
+    executive_narrative: str = ""
 
 
 class ReportWorkflow:
@@ -44,9 +57,14 @@ class ReportWorkflow:
         self,
         meta_tool: MetaAdsTool,
         whatsapp_tool: WhatsAppTool,
+        enable_narrative: bool | None = None,
     ) -> None:
         self.meta = meta_tool
         self.wa = whatsapp_tool
+        # None → lê do settings.yaml; bool explícito → override (testes)
+        self.enable_narrative = (
+            _narrative_enabled() if enable_narrative is None else enable_narrative
+        )
         _LOG_DIR.mkdir(exist_ok=True)
 
     def run(
@@ -74,6 +92,9 @@ class ReportWorkflow:
             date_str=now.strftime("%d/%m/%Y"),
             time_str=now.strftime("%H:%M"),
         )
+
+        if self.enable_narrative:
+            report.executive_narrative = self._generate_narrative(report)
 
         report.raw_text = self._render(report)
 
@@ -157,6 +178,38 @@ class ReportWorkflow:
             recommendations=recommendations,
         )
 
+    def _generate_narrative(self, report: DailyReport) -> str:
+        """
+        Gera uma narrativa executiva curta via músculo (Gemini Flash-Lite).
+
+        FAIL-SAFE: qualquer erro (sem chave, SDK ausente, timeout, etc.) retorna
+        "" e o relatório determinístico segue intacto. NUNCA propaga exceção.
+        """
+        try:
+            from ..llm_router import TaskType, get_router
+
+            e = report.executive_summary
+            prompt = (
+                "Resuma em 2-3 frases objetivas, em português, o desempenho de "
+                "tráfego pago do dia para um gestor. Sem inventar números além "
+                "destes. Dados:\n"
+                f"- Gasto: R${e['gasto_dia']:.2f}\n"
+                f"- Leads: {e['leads_gerados']}\n"
+                f"- CPL médio: R${e['cpl_medio']:.2f}\n"
+                f"- Ad sets ativos: {e['adsets_ativos']}\n"
+                f"- Ações autônomas: {e['acoes_tomadas']}\n"
+                f"- Anomalias: {report.anomalies or 'nenhuma'}"
+            )
+            text = get_router().route(
+                TaskType.REPORT_GENERATION,
+                prompt,
+                system="Você é um analista de tráfego pago conciso e factual.",
+            )
+            return (text or "").strip()
+        except Exception as exc:  # noqa: BLE001 — narrativa é best-effort
+            logger.warning("Narrativa executiva indisponível (fallback p/ determinístico): %s", exc)
+            return ""
+
     def _render(self, report: DailyReport) -> str:
         """Renderiza o relatório em TXT estruturado."""
         e = report.executive_summary
@@ -173,6 +226,12 @@ class ReportWorkflow:
             f"Ad sets ativos: {e['adsets_ativos']}",
             f"Ações tomadas: {e['acoes_tomadas']}",
             "",
+        ]
+
+        if report.executive_narrative:
+            lines += [report.executive_narrative, ""]
+
+        lines += [
             "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━",
             "",
             "📋 RELATÓRIO COMPLETO",

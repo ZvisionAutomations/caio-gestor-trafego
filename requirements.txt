@@ -34,5 +34,6 @@ mypy>=1.10.0
 # Logging
 structlog>=24.1.0
 
-# LLM Routing
-groq>=0.9.0
+# LLM Routing — músculo Gemini 2.5 Flash-Lite (SDK unificado google-genai).
+# NÃO usar google-generativeai (descontinuado em 2025-11-30).
+google-genai>=1.0.0

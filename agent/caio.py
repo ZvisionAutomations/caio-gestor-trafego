@@ -173,13 +173,15 @@ def build_caio(
     Factory que constrói o agente Caio com todas as tools configuradas.
     Injeta knowledge base no contexto do sistema.
 
-    LLM routing: workflows podem importar `llm_router.router` para delegar
-    tarefas rotineiras ao Groq e decisões complexas ao Claude Sonnet 4.6.
+    LLM routing: workflows podem importar `llm_router.get_router()` para delegar
+    tarefas rotineiras de texto puro ao músculo (Gemini 2.5 Flash-Lite) e
+    decisões complexas ao cérebro Claude Haiku 4.5. O tool-calling do agente
+    abaixo é sempre o cérebro Claude.
     """
     settings = _load_settings(settings_path)
     knowledge = _load_knowledge()
 
-    model_id = settings.get("agent", {}).get("llm_model", "claude-sonnet-4-6")
+    model_id = settings.get("agent", {}).get("llm_model", "claude-haiku-4-5-20251001")
 
     full_prompt = SYSTEM_PROMPT + f"\n\n---\n\n## KNOWLEDGE BASE\n\n{knowledge}"
 

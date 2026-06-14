@@ -1,0 +1,53 @@
+schema: 1
+story: "057"
+title: "Correção e migração da stack LLM do Caio (Gemini Flash + Claude Haiku 4.5)"
+gate: PASS
+status_reason: "Stack LLM migrada com rastreabilidade total AC→código; suíte 7/7, ruff+mypy limpos, fail-safe comprovado empiricamente; zero secrets; sem modelos descontinuados; sem regressão."
+reviewer: "Litmus (@quality-gate)"
+updated: "2026-06-14T16:00:00Z"
+
+waiver:
+  active: false
+
+top_issues: []
+
+evidence:
+  tests_reviewed:
+    suite: "7/7 harnesses PASS (re-executados independentemente no WSL py3.14)"
+    new: "harnesses/test_llm_router.py — roteamento músculo/cérebro, fallback, IDs, anti-regressão de modelo morto"
+    lint: "ruff check → All checks passed"
+    types: "mypy --ignore-missing-imports → Success, no issues"
+  ac_traceability:
+    AC-1: "PASS — claude-haiku-4-5-20251001 em config/settings.yaml:10 e agent/caio.py:184"
+    AC-2: "PASS — grep em agent/+config/+requirements: nenhum llama-3.1-70b-versatile/claude-sonnet-4-6/groq"
+    AC-3: "PASS — músculo Gemini 2.5 Flash-Lite via google-genai; fail-safe verificado (router instancia sem chaves, gemini_avail=False)"
+    AC-4: "PASS — router conectado a workflows/report.py (narrativa executiva aditiva e fail-safe; toggle report.executive_narrative)"
+    AC-5: "PASS — requirements: -groq +google-genai>=1.0.0; pacote confirmado no PyPI (latest 2.8.0)"
+    AC-6: "PASS — GOOGLE_API_KEY placeholder em config/.env.example, sem valor (Art. X)"
+    AC-7: "PASS — suíte + ruff + mypy verdes"
+    AC-8: "PASS — test_traffic_skills constrói o agente com model_id default = Haiku 4.5"
+
+nfr_validation:
+  security:
+    status: PASS
+    notes: "Sem secrets no código ou .env.example; nenhuma chave hardcoded."
+  reliability:
+    status: PASS
+    notes: "Fail-safe comprovado: boot/import do router sem GOOGLE_API_KEY/GEMINI_API_KEY/ANTHROPIC_API_KEY não quebra; músculo cai no cérebro; narrativa do relatório é best-effort (erro → relatório determinístico intacto)."
+  maintainability:
+    status: PASS
+    notes: "Dead code (caminho Groq + modelo descontinuado) removido; API pública do router preservada (TaskType/get_router)."
+  performance:
+    status: PASS
+    notes: "Volume baixo (3 ciclos/dia); músculo Flash-Lite é a opção mais barata."
+
+advisory_notes:
+  - "Com report.executive_narrative=true (default), o relatório diário passa a fazer 1 chamada LLM/dia (músculo, ou cérebro no fallback). Custo desprezível; togglável em settings.yaml. Comportamento novo em prod — documentado."
+  - "Decisão de design aceitável: router usa SDK raw google-genai (não a classe Agno Gemini). Adequado p/ chamada de texto puro; tool-calling permanece no cérebro Claude. Evita bugs Agno+Gemini (#2186/#2298)."
+
+deploy_notes: "Story de código do agente Caio (packages/caio-trafego), que NÃO roda na VPS ainda. 'Deploy' aqui = commit + PR no repo caio-gestor-trafego (e docs no Sinapse). Sem deploy-por-cópia na VPS. GOOGLE_API_KEY real só será necessária quando o agente Caio for ao ar (gate do operador/Fernando); até lá o fallback cobre."
+
+recommendations:
+  immediate: []
+  future:
+    - "Smoke test com GOOGLE_API_KEY real quando o agente Caio for deployado (validar narrativa executiva ponta-a-ponta)."
