@@ -7,10 +7,13 @@ from pathlib import Path
 
 import yaml
 from agno.agent import Agent
-from agno.models.anthropic import Claude
+from agno.models.openai import OpenAIChat
 
 from .tools.meta_ads import MetaAdsTool
 from .tools.whatsapp import WhatsAppTool
+
+# OpenRouter base URL (OpenAI-compatible)
+_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
 
 logger = logging.getLogger("caio.agent")
 
@@ -175,19 +178,26 @@ def build_caio(
 
     LLM routing: workflows podem importar `llm_router.get_router()` para delegar
     tarefas rotineiras de texto puro ao músculo (Gemini 2.5 Flash-Lite) e
-    decisões complexas ao cérebro Claude Haiku 4.5. O tool-calling do agente
-    abaixo é sempre o cérebro Claude.
+    decisões complexas ao cérebro DeepSeek V3.2. O tool-calling do agente
+    abaixo é sempre o cérebro (deepseek/deepseek-v3.2).
     """
     settings = _load_settings(settings_path)
     knowledge = _load_knowledge()
 
-    model_id = settings.get("agent", {}).get("llm_model", "claude-haiku-4-5-20251001")
+    # OpenRouter: modelo configurável em settings.yaml > agent.llm_model
+    # Formato: "provider/model-name" (ex. "anthropic/claude-haiku-4-5")
+    model_id = settings.get("agent", {}).get("llm_model", "deepseek/deepseek-v3.2")
+    openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
 
     full_prompt = SYSTEM_PROMPT + f"\n\n---\n\n## KNOWLEDGE BASE\n\n{knowledge}"
 
     return Agent(
         name="Caio",
-        model=Claude(id=model_id),
+        model=OpenAIChat(
+            id=model_id,
+            base_url=_OPENROUTER_BASE_URL,
+            api_key=openrouter_key,
+        ),
         instructions=full_prompt,
         tools=[
             # Leitura — conta e campanhas

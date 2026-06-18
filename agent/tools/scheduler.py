@@ -97,7 +97,8 @@ class CaioScheduler:
             len(self._scheduler.get_jobs()),
         )
         for job in self._scheduler.get_jobs():
-            logger.info("  Job: %s | Próxima execução: %s", job.name, job.next_run_time)
+            next_run = getattr(job, "next_run_time", None) or "(pendente — antes do start)"
+            logger.info("  Job: %s | Próxima execução: %s", job.name, next_run)
         self._scheduler.start()
 
     def shutdown(self) -> None:

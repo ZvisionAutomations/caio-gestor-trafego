@@ -4,8 +4,8 @@
 # Core Framework
 agno>=1.0.0
 
-# LLM
-anthropic>=0.25.0
+# LLM — OpenRouter via SDK OpenAI-compatible (única chave, múltiplos modelos)
+openai>=1.0.0
 
 # Meta Ads SDK (oficial)
 facebook-business>=19.0.0
@@ -34,6 +34,5 @@ mypy>=1.10.0
 # Logging
 structlog>=24.1.0
 
-# LLM Routing — músculo Gemini 2.5 Flash-Lite (SDK unificado google-genai).
-# NÃO usar google-generativeai (descontinuado em 2025-11-30).
-google-genai>=1.0.0
+# Nota: anthropic e google-genai removidos — OpenRouter roteia para qualquer
+# modelo via openai SDK. Adicionar aqui se precisar de SDK direto no futuro.

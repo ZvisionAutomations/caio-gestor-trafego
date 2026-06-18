@@ -5,9 +5,13 @@ agent:
   name: "Caio"
   role: "Gestor de Tráfego Raiz Vital"
   version: "1.0.0"
-  # Cérebro de tool-calling (story-057). Músculo de texto puro = Gemini 2.5
-  # Flash-Lite, roteado em agent/llm_router.py.
-  llm_model: "claude-haiku-4-5-20251001"
+  # Cérebro de tool-calling — formato OpenRouter "provider/model".
+  # Decisão 2026-06-17: DeepSeek V3.2 — $0.23/$0.34/M, thinking integrado no tool-use.
+  # Pesquisa: research/llm-openrouter-benchmark-caio-2026-06-17.md
+  llm_model: "deepseek/deepseek-v3.2"
+  # Músculo de texto puro (relatórios, classificação) — opcional.
+  # Decisão 2026-06-17: Gemini 2.5 Flash-Lite — mesmo preço, benchmarks superiores vs 2.0.
+  muscle_model: "google/gemini-2.5-flash-lite"
 
 # THRESHOLDS DE PERFORMANCE (defaults — recalibrar aos 7 dias)
 thresholds:
