@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -29,7 +30,19 @@ def _load_settings_section(section: str) -> dict:
         return {}
 
 
+def _start_scheduler_background(scheduler) -> threading.Thread:
+    thread = threading.Thread(
+        target=scheduler.start,
+        name="caio-scheduler",
+        daemon=True,
+    )
+    thread.start()
+    logger.info("Scheduler iniciado em thread de background.")
+    return thread
+
+
 def main() -> None:
+    from .inbound_handler import create_app
     from .business_signal import BusinessSignalReader
     from .inbox_poller import poll_once
     from .tools.meta_ads import MetaAdsTool
@@ -107,11 +120,46 @@ def main() -> None:
 
     wa.send_message("🟢 Caio online. Monitorando campanhas Meta Ads 24/7. Raiz Vital.")
 
-    logger.info("Scheduler iniciado. Ciclos registrados.")
+    inbound_cfg = _load_settings_section("inbound")
+    inbound_enabled = bool(inbound_cfg.get("enabled", False))
+    logger.info("Scheduler configurado. Ciclos registrados. inbound_enabled=%s", inbound_enabled)
     try:
-        scheduler.start()
+        if inbound_enabled:
+            import uvicorn
+
+            from .caio import build_caio
+            from .conversation import CaioConversationResponder, GroupMemory
+            from .spend_gate import SpendGate
+
+            group_id = str(inbound_cfg.get("group_id") or wa.group_id)
+            host = str(inbound_cfg.get("host", "0.0.0.0"))
+            port = int(inbound_cfg.get("port", 8010))
+            secret_env = str(inbound_cfg.get("webhook_secret_env", "CAIO_INBOUND_WEBHOOK_SECRET"))
+            memory_turns = int(inbound_cfg.get("memory_turns", 8))
+            approval_cfg = _load_settings_section("approval")
+            responder = CaioConversationResponder(
+                caio_agent=build_caio(meta, wa),
+                memory=GroupMemory(max_turns=memory_turns),
+                spend_gate=SpendGate(
+                    meta_tool=meta,
+                    whatsapp_tool=wa,
+                    timeout_minutes=int(approval_cfg.get("timeout_hours", 2) * 60),
+                ),
+            )
+            app = create_app(
+                whatsapp_tool=wa,
+                allowed_group_id=group_id,
+                webhook_secret=os.getenv(secret_env, ""),
+                response_builder=responder,
+            )
+            _start_scheduler_background(scheduler)
+            logger.info("Inbound HTTP iniciando em %s:%s para grupo %s", host, port, group_id)
+            uvicorn.run(app, host=host, port=port, log_level=os.getenv("LOG_LEVEL", "info").lower())
+        else:
+            scheduler.start()
     except (KeyboardInterrupt, SystemExit):
         logger.info("Caio encerrado pelo operador.")
+    finally:
         scheduler.shutdown()
 
 

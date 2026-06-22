@@ -19,6 +19,9 @@ HARNESSES = [
     ("test_carousel", ROOT / "harnesses" / "test_carousel.py"),
     ("test_inbox_poller", ROOT / "harnesses" / "test_inbox_poller.py"),
     ("test_scale_guardrail", ROOT / "harnesses" / "test_scale_guardrail.py"),
+    ("test_inbound_handler", ROOT / "harnesses" / "test_inbound_handler.py"),
+    ("test_conversation", ROOT / "harnesses" / "test_conversation.py"),
+    ("test_spend_gate", ROOT / "harnesses" / "test_spend_gate.py"),
 ]
 
 

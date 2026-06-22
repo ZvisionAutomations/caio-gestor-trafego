@@ -8,9 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from agent.tools.meta_ads import MetaAdsTool
-from agent.tools.whatsapp import WhatsAppTool
-from agent.workflows.campaign_inbox import CampaignInboxWorkflow
+from agent.tools.meta_ads import MetaAdsTool  # noqa: E402
+from agent.tools.whatsapp import WhatsAppTool  # noqa: E402
+from agent.workflows.campaign_inbox import CampaignInboxWorkflow  # noqa: E402
 
 
 class _DryRunMeta:

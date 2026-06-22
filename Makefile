@@ -1,7 +1,7 @@
 .PHONY: help install run test report lint
 
 PYTHON ?= python
-MYPY_FILES := agent/caio.py agent/tools/meta_ads.py agent/tools/whatsapp.py agent/tools/scheduler.py agent/workflows/analyze.py agent/workflows/optimize.py agent/workflows/approve.py agent/workflows/report.py
+MYPY_FILES := agent/caio.py agent/conversation.py agent/inbound_handler.py agent/spend_gate.py agent/tools/meta_ads.py agent/tools/whatsapp.py agent/tools/scheduler.py agent/workflows/analyze.py agent/workflows/optimize.py agent/workflows/approve.py agent/workflows/report.py
 
 help:
 	@echo "Caio — Gestor de Tráfego Raiz Vital"

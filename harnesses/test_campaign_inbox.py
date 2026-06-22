@@ -10,6 +10,7 @@ if hasattr(sys.stdout, "reconfigure"):
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import json
+import shutil
 
 from agent import creative_tasks
 from agent.business_signal import BusinessSignal, evaluate_scale_guardrails
@@ -133,9 +134,6 @@ def test_business_signal_blocks_scale_without_guardrails_or_paid_sale():
     assert locked.allowed is False
     assert no_sale.allowed is False
     assert paid.allowed is True
-
-
-import shutil
 
 
 def _fresh_dir(name: str) -> Path:

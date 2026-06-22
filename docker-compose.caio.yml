@@ -18,6 +18,8 @@ services:
     volumes:
       - ./inbox:/app/inbox      # pasta de handoff (depositar pacotes de campanha)
       - ./logs:/app/logs        # logs e históricos (campaign-inbox-history.jsonl, etc.)
+    expose:
+      - "8010"                  # inbound Evolution interno: http://caio-trafego:8010/inbound
     networks:
       - zwaf_net
 

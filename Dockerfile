@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY agent/ ./agent/
 COPY config/settings.yaml ./config/settings.yaml
 
-# O agente roda um BlockingScheduler 24/7:
+# O agente roda scheduler 24/7 + inbound HTTP opcional:
 #   08:00 análise · 14:00 check · 20:30 relatório · recalibração D+7 · inbox poll (15min)
+#   inbound Evolution: http://caio-trafego:8010/inbound
 CMD ["python", "-m", "agent.main"]

@@ -58,6 +58,15 @@ inbox:
   # credenciais Meta do Fernando estarem na VPS). Trocar p/ false no go-live real.
   dry_run: true
 
+# INBOUND CONVERSACIONAL (story-070)
+inbound:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8010
+  group_id: "120363429540176496@g.us"  # Grupo Raiz Vital
+  memory_turns: 8
+  webhook_secret_env: "CAIO_INBOUND_WEBHOOK_SECRET"
+
 # CICLOS DE OPERAÇÃO
 schedule:
   morning_analysis: "08:00"
