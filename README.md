@@ -61,6 +61,22 @@ make run
 
 ---
 
+## Inbound Conversacional (Story 070)
+
+O Caio tambem expoe um webhook interno para a Evolution API:
+
+```text
+POST http://caio-trafego:8010/inbound
+Header: x-caio-webhook-secret: <CAIO_INBOUND_WEBHOOK_SECRET>
+Evento: MESSAGES_UPSERT
+```
+
+Nesta etapa o handler filtra apenas o grupo Raiz Vital (`120363429540176496@g.us`),
+ignora mensagens `fromMe=true` e responde com um stub controlado. O cerebro real
+via `build_caio()` fica para a Story 071.
+
+---
+
 ## Checklist de Go-Live
 
 ### Pré-go-live (sem Fernando)

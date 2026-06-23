@@ -17,8 +17,9 @@
    (chave efêmera EC2 Instance Connect; IP admin já liberado no SG).
 2. **Criar `/opt/caio/.env.caio`** com os valores reais (operador, via `nano` — **nunca no chat**):
    - `META_APP_ID`, `META_APP_SECRET`, `META_ACCESS_TOKEN`, `META_ACCOUNT_ID`
-   - `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY` (músculo Gemini; opcional — fallback Haiku)
+   - `OPENROUTER_API_KEY`
    - `EVOLUTION_API_URL`, `EVOLUTION_API_KEY`, `EVOLUTION_INSTANCE`, `WHATSAPP_GROUP_ID`
+   - `CAIO_INBOUND_WEBHOOK_SECRET` (secret do webhook; enviar no header `x-caio-webhook-secret`)
    - `CAIO_DATABASE_URL`, `CAIO_SIGNAL_TENANT_ID` (ver passo 3)
 3. **Senha do role `caio_ro`** no Postgres do zwaf (uma vez):
    ```
@@ -40,6 +41,10 @@
    ```
 7. **Pasta de handoff:** depositar pacotes em `/opt/caio/inbox/<pasta>/` (ver
    `docs/handoff-folder-contract.md`). Manter `inbox.dry_run=true` no settings até validar.
+8. **Webhook Evolution inbound (Story 070):** configurar a instancia `caio-trafego` para enviar
+   `MESSAGES_UPSERT` para `http://caio-trafego:8010/inbound` na rede `zwaf_default`, com header
+   `x-caio-webhook-secret` igual ao `CAIO_INBOUND_WEBHOOK_SECRET`. O handler responde apenas ao grupo
+   Raiz Vital e ignora `fromMe=true`.
 
 ## Go-live check (com conta Meta real)
 - Confirmar o CTA Click-to-WhatsApp (`WHATSAPP_MESSAGE` vs `SEND_MESSAGE`) — ver
