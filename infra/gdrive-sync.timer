@@ -1,0 +1,14 @@
+# story-092a — dispara o gdrive-sync.service a cada 15 min.
+# Instalar em /etc/systemd/system/gdrive-sync.timer, depois:
+#   systemctl daemon-reload && systemctl enable --now gdrive-sync.timer
+#   systemctl list-timers | grep gdrive
+[Unit]
+Description=Roda gdrive-sync a cada 15 min
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

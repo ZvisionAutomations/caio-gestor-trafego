@@ -1,0 +1,15 @@
+# story-092a — sincroniza criativos do Google Drive p/ o inbox local do Caio.
+# Instalar em /etc/systemd/system/gdrive-sync.service (ver docs/runbooks/gdrive-rclone-handoff-setup.md).
+# Pré-req: remote rclone `gdrive` (drive.readonly) já autenticado; rclone.conf perms 600.
+[Unit]
+Description=Sync criativos GDrive -> Caio inbox (raiz-vital)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# --filter "- .caio_processed": nunca sobrescreve o marker de idempotência local (AC-2).
+ExecStart=/usr/bin/rclone copy gdrive:raiz-vital/creative-inbox /opt/caio/inbox \
+  --filter "- .caio_processed" \
+  --log-file /var/log/gdrive-sync.log \
+  --log-level INFO

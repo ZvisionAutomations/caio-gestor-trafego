@@ -1,0 +1,13 @@
+{
+  "_comment": "Exemplo de config de MCP server para o Hermes. Ajuste ao formato exato do seu build do Hermes desktop. NUNCA cole tokens reais aqui — use variaveis de ambiente.",
+  "mcpServers": {
+    "meta-ads": {
+      "command": "npx",
+      "args": ["-y", "meta-ads-mcp"],
+      "env": {
+        "META_ACCESS_TOKEN": "${META_ACCESS_TOKEN}",
+        "META_AD_ACCOUNT_ID": "${META_AD_ACCOUNT_ID}"
+      }
+    }
+  }
+}
