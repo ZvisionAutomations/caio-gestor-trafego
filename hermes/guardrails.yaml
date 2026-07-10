@@ -1,0 +1,72 @@
+# Guardrails do Caio v2 — config-driven do wrapper meta-ads-mcp-guarded (artefato C).
+#
+# Fonte ÚNICA de números/limites/listas (furo D do hermes-v2-slicing): o SOUL-v2
+# só REFERENCIA estes valores em linguagem natural; nunca reescreve número aqui.
+# Editável sem redeploy — o wrapper lê no boot (aponte GUARDED_CONFIG_PATH pra cá).
+#
+# ⚠️ Unidades: caps aqui em BRL; a Graph API recebe budget em CENTAVOS (o wrapper converte).
+
+guardian: # story-088
+  # Rollout (AC-4): 'warn' loga o que BLOQUEARIA sem bloquear (7 dias); depois 'enforce'.
+  mode: warn
+
+  base_daily_cap: 300 # BRL — teto base de gasto diário da conta (AC-1/AC-6)
+  reinvest_pct: 0.20 # AC-6 — teto dinâmico = base + pct × receita_atribuída_via_CAPI (087)
+  max_daily_per_adset: 50 # BRL — teto de budget diário por adset (AC-1)
+  max_mutations_per_hour: 12 # anti-flapping — nº máx. de mutações/hora (slicing)
+
+  circuit_breaker: # abre após N bloqueios seguidos, fecha após o cooldown
+    consecutive_blocks_to_trip: 5
+    cooldown_minutes: 30
+
+compliance: # story-094 — política Health/Wellness da Meta (suplemento feminino = categoria sensível)
+  mode: warn # warn | enforce (fail-closed no match; ships warn)
+  # Baseline de termos sensíveis — REVISAR periodicamente contra a política vigente da Meta.
+  # NÃO é parecer jurídico. Matching normaliza acento/caixa e casa por palavra.
+  prohibited_terms:
+    - menopausa
+    - climaterio
+    - reposicao hormonal
+    - hormonio
+    - hormonal
+    - fertilidade
+    - infertil
+    - libido
+    - depressao
+    - ansiedade
+    - insonia
+    - cura
+    - trata
+    - tratamento
+    - emagrece
+    - emagrecimento
+  claim_patterns: # regex (normalizados) — claims proibidos
+    - antes\s*(e|/)?\s*depois
+    - resultado garantido
+    - \bcura\b
+
+state: # story-089 — gate de consistência de estado do adset
+  mode: warn # warn | enforce
+
+rules: # story-090 — thresholds multi-condição (tunáveis sem redeploy, AC-1)
+  cpl_target_brl: 40 # CPL-alvo por Purchase
+  cpl_proxy_brl: 14 # CPL proxy (conversa/lead)
+  min_window_hours: 72 # janela mínima antes de agir
+  pause_min_spend_brl: 50 # gasto mínimo p/ pausa (AC-2)
+  freq_max: 3.5 # frequência máxima
+  scale_pct: 0.20 # incremento de escala (+20%/72h)
+  scale_jump_duplicate_factor: 2 # salto >2× → duplicar (não editar)
+  scale_min_days_profitable: 7 # AC-3.1 escala autônoma
+  fatigue_ctr_drop_pct: 0.20 # queda de CTR que sinaliza fadiga
+  kill_spend_brl: 120 # gasto sem conversão → kill (AC-5)
+  kill_max_days: 14 # idade máxima sem conversão
+
+retargeting: # story-093 — Campanha 2 (ABO): conversas iniciadas sem compra (maior intenção)
+  audience_retention_days: 14 # janela do público de conversas via Business Messaging (AC-1)
+  min_daily_budget_brl: 30 # faixa de budget do Adset C (AC-1)
+  max_daily_budget_brl: 50
+  min_differentiation_pct: 0.20 # diferenciação mínima entre adsets da mesma campanha (AC-4)
+  entry_budget_min_brl: 130 # budget de entrada consolidado ToF + retargeting (AC-2)
+  entry_budget_max_brl: 150
+  engagement_source: messaging # Business Messaging (conversas WhatsApp)
+  purchasers_audience_id: "" # opcional — audiência de compradores p/ exclusão (senão vem do manifest)

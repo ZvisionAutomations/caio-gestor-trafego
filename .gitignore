@@ -30,3 +30,6 @@ build/
 .vscode/
 .idea/
 *.swp
+
+# Node (wrapper meta-ads-mcp-guarded vendorizado)
+node_modules/

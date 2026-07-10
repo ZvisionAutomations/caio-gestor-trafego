@@ -1,0 +1,18 @@
+{
+  "_comment": "Config do MCP do Hermes apontando pro WRAPPER guardado (Caio v2) NO LUGAR do meta-ads-mcp cru. O wrapper spawna o meta-ads-mcp real como filho (passthrough) e intercepta os mutantes (091 schema / 088 Guardian / 089 state / 094 compliance) + expoe as tools novas upload_creative_from_inbox (092b) e build_retargeting_campaign (093). NUNCA cole tokens reais aqui — use variaveis de ambiente.",
+  "mcpServers": {
+    "meta-ads": {
+      "command": "node",
+      "args": ["/opt/caio/caio-gestor-trafego/meta-ads-mcp-guarded/src/index.js"],
+      "env": {
+        "META_ACCESS_TOKEN": "${META_ACCESS_TOKEN}",
+        "META_AD_ACCOUNT_ID": "${META_AD_ACCOUNT_ID}",
+        "GUARDED_CHILD_COMMAND": "/root/.hermes/bin/uvx",
+        "GUARDED_CHILD_ARGS_JSON": "[\"meta-ads-mcp\"]",
+        "GUARDED_CONFIG_PATH": "/opt/caio/caio-gestor-trafego/hermes/guardrails.yaml",
+        "CAIO_INBOX_DIR": "/opt/caio/inbox",
+        "CAIO_DATABASE_URL": "${CAIO_DATABASE_URL}"
+      }
+    }
+  }
+}
